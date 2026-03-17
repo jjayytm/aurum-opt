@@ -1156,6 +1156,13 @@ if (IS_ONLINE) {
 
 let pollTimer = null;
 
+async function safeReadJson(resp) {
+  const txt = await resp.text();
+  if (!txt) throw new Error('Empty response');
+  try { return JSON.parse(txt); }
+  catch { throw new Error('Non-JSON response'); }
+}
+
 async function runOptimizer() {
   const input  = document.getElementById('cutoffInput');
   const cutoff = parseFloat(input.value);
@@ -1209,8 +1216,15 @@ async function runOptimizer() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r    = await fetch('/api/status');
-      const data = await r.json();
+      const r = await fetch('/api/status', { cache: 'no-store' });
+      if (!r.ok) {
+        // Render free tier may be waking up/restarting; proxy returns 502/503 (often HTML).
+        msg.textContent = `Polling… server unavailable (HTTP ${r.status}). Waiting…`;
+        msg.style.color = 'var(--muted)';
+        setNav('Waking up / restarting…', 'loading');
+        return;
+      }
+      const data = await safeReadJson(r);
 
       msg.textContent = data.message || '…';
 
@@ -1257,8 +1271,9 @@ async function runOptimizer() {
       }
 
     } catch(e) {
-      // poll failed — show but keep polling
-      msg.textContent = 'Polling… ' + e.message;
+      // Poll failed — show but keep polling
+      msg.textContent = 'Polling… ' + (e && e.message ? e.message : 'error');
+      msg.style.color = 'var(--muted)';
     }
   }, 2000);
 }
