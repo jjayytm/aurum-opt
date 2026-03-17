@@ -1,0 +1,310 @@
+{
+  "cutoff": 8.0,
+  "gold_oz": 9477731.4,
+  "gold_grams": 294790620.1,
+  "waste_pct": 27.54,
+  "ore_tonnes": 27261088.0,
+  "waste_tonnes": 10362788.0,
+  "stope_count": 4313,
+  "mean_grade": 10.79,
+  "max_grade": 18.37,
+  "scan_time_s": 0.75,
+  "total_time_s": 11.88,
+  "z_elevations": [
+    -392.5,
+    -362.5,
+    -332.5,
+    -302.5,
+    -272.5,
+    -242.5,
+    -212.5,
+    -182.5,
+    -152.5,
+    -122.5,
+    -92.5,
+    -62.5,
+    -32.5
+  ],
+  "by_elevation": [
+    {
+      "z": -392.5,
+      "gold_oz": 223918.2,
+      "count": 109,
+      "avg_grade": 10.33
+    },
+    {
+      "z": -362.5,
+      "gold_oz": 602324.2,
+      "count": 332,
+      "avg_grade": 10.25
+    },
+    {
+      "z": -332.5,
+      "gold_oz": 932615.3,
+      "count": 444,
+      "avg_grade": 10.43
+    },
+    {
+      "z": -302.5,
+      "gold_oz": 898291.7,
+      "count": 432,
+      "avg_grade": 10.24
+    },
+    {
+      "z": -272.5,
+      "gold_oz": 806307.8,
+      "count": 377,
+      "avg_grade": 10.5
+    },
+    {
+      "z": -242.5,
+      "gold_oz": 805899.6,
+      "count": 364,
+      "avg_grade": 10.56
+    },
+    {
+      "z": -212.5,
+      "gold_oz": 1011267.5,
+      "count": 429,
+      "avg_grade": 10.98
+    },
+    {
+      "z": -182.5,
+      "gold_oz": 984081.2,
+      "count": 418,
+      "avg_grade": 11.31
+    },
+    {
+      "z": -152.5,
+      "gold_oz": 1035346.6,
+      "count": 430,
+      "avg_grade": 11.23
+    },
+    {
+      "z": -122.5,
+      "gold_oz": 904014.1,
+      "count": 377,
+      "avg_grade": 11.22
+    },
+    {
+      "z": -92.5,
+      "gold_oz": 829385.0,
+      "count": 353,
+      "avg_grade": 11.3
+    },
+    {
+      "z": -62.5,
+      "gold_oz": 427637.7,
+      "count": 210,
+      "avg_grade": 11.03
+    },
+    {
+      "z": -32.5,
+      "gold_oz": 16642.5,
+      "count": 38,
+      "avg_grade": 9.26
+    }
+  ],
+  "top20_stopes": [
+    {
+      "X_ORIGIN": 4782.5,
+      "Y_ORIGIN": 4117.5,
+      "Z_ORIGIN": -362.5,
+      "WAVG_GRADE": 16.54,
+      "GOLD_OZ": 4625.24,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4922.5,
+      "Y_ORIGIN": 4127.5,
+      "Z_ORIGIN": -122.5,
+      "WAVG_GRADE": 16.49,
+      "GOLD_OZ": 4612.26,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4792.5,
+      "Y_ORIGIN": 4127.5,
+      "Z_ORIGIN": -362.5,
+      "WAVG_GRADE": 16.44,
+      "GOLD_OZ": 4599.61,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4922.5,
+      "Y_ORIGIN": 4117.5,
+      "Z_ORIGIN": -122.5,
+      "WAVG_GRADE": 16.22,
+      "GOLD_OZ": 4535.69,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4922.5,
+      "Y_ORIGIN": 4102.5,
+      "Z_ORIGIN": -122.5,
+      "WAVG_GRADE": 16.22,
+      "GOLD_OZ": 4535.69,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4922.5,
+      "Y_ORIGIN": 4107.5,
+      "Z_ORIGIN": -122.5,
+      "WAVG_GRADE": 16.22,
+      "GOLD_OZ": 4535.69,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4922.5,
+      "Y_ORIGIN": 4112.5,
+      "Z_ORIGIN": -122.5,
+      "WAVG_GRADE": 16.22,
+      "GOLD_OZ": 4535.69,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4792.5,
+      "Y_ORIGIN": 4122.5,
+      "Z_ORIGIN": -362.5,
+      "WAVG_GRADE": 16.21,
+      "GOLD_OZ": 4534.55,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4797.5,
+      "Y_ORIGIN": 4132.5,
+      "Z_ORIGIN": -362.5,
+      "WAVG_GRADE": 16.12,
+      "GOLD_OZ": 4508.99,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4927.5,
+      "Y_ORIGIN": 4162.5,
+      "Z_ORIGIN": -92.5,
+      "WAVG_GRADE": 15.99,
+      "GOLD_OZ": 4473.82,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 362.5,
+      "WASTE_RATIO": 0.04
+    },
+    {
+      "X_ORIGIN": 4942.5,
+      "Y_ORIGIN": 4282.5,
+      "Z_ORIGIN": -212.5,
+      "WAVG_GRADE": 15.97,
+      "GOLD_OZ": 4466.58,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4942.5,
+      "Y_ORIGIN": 4287.5,
+      "Z_ORIGIN": -212.5,
+      "WAVG_GRADE": 15.97,
+      "GOLD_OZ": 4466.58,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4907.5,
+      "Y_ORIGIN": 4152.5,
+      "Z_ORIGIN": -182.5,
+      "WAVG_GRADE": 15.95,
+      "GOLD_OZ": 4461.56,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4777.5,
+      "Y_ORIGIN": 4112.5,
+      "Z_ORIGIN": -362.5,
+      "WAVG_GRADE": 15.93,
+      "GOLD_OZ": 4456.96,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4937.5,
+      "Y_ORIGIN": 4182.5,
+      "Z_ORIGIN": -92.5,
+      "WAVG_GRADE": 15.86,
+      "GOLD_OZ": 4435.25,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4797.5,
+      "Y_ORIGIN": 3912.5,
+      "Z_ORIGIN": -152.5,
+      "WAVG_GRADE": 15.84,
+      "GOLD_OZ": 4430.43,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4797.5,
+      "Y_ORIGIN": 3917.5,
+      "Z_ORIGIN": -152.5,
+      "WAVG_GRADE": 15.8,
+      "GOLD_OZ": 4419.04,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4892.5,
+      "Y_ORIGIN": 4162.5,
+      "Z_ORIGIN": -272.5,
+      "WAVG_GRADE": 15.76,
+      "GOLD_OZ": 4408.62,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 362.5,
+      "WASTE_RATIO": 0.04
+    },
+    {
+      "X_ORIGIN": 4792.5,
+      "Y_ORIGIN": 3902.5,
+      "Z_ORIGIN": -152.5,
+      "WAVG_GRADE": 15.69,
+      "GOLD_OZ": 4388.83,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    },
+    {
+      "X_ORIGIN": 4792.5,
+      "Y_ORIGIN": 3907.5,
+      "Z_ORIGIN": -152.5,
+      "WAVG_GRADE": 15.65,
+      "GOLD_OZ": 4378.77,
+      "ORE_TONNES": 8700.0,
+      "WASTE_TONNES": 0.0,
+      "WASTE_RATIO": 0.0
+    }
+  ]
+}

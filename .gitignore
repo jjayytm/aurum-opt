@@ -4,6 +4,4 @@ __pycache__/
 .env
 venv/
 outputs/
-data/results*.json
 *.dxf
-*.csv
