@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>AURUM-OPT — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#d4a843;--gold-dim:#9a7530;--gold-glow:rgba(212,168,67,.15);
+  --bg:#07090e;--s1:#0c1018;--s2:#111720;--s3:#161f2b;
+  --border:#1c2a3a;--border2:#243344;
+  --text:#dde8f5;--muted:#5a7090;--muted2:#3d5268;
+  --green:#1fc76a;--green-dim:rgba(31,199,106,.12);
+  --red:#e84040;--blue:#3d9be0;
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);
+  color:var(--text);font-size:12px;line-height:1.5;
+  height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── NAV ── */
+.nav{
+  height:50px;flex-shrink:0;
+  background:rgba(7,9,14,.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+  position:relative;z-index:50;
+}
+.logo{font-size:16px;font-weight:700;letter-spacing:-.4px;
+  display:flex;align-items:center;gap:3px;flex-shrink:0}
+.logo-au{color:var(--gold)}
+.logo-gem{
+  width:14px;height:14px;
+  background:linear-gradient(135deg,var(--gold),#f0d080);
+  clip-path:polygon(50% 0%,100% 35%,80% 100%,20% 100%,0% 35%);
+  margin:0 1px;flex-shrink:0
+}
+.nav-sep{width:1px;height:18px;background:var(--border2);flex-shrink:0}
+.nav-sub{font-size:10px;color:var(--muted);white-space:nowrap}
+.nav-tabs{display:flex;gap:2px;margin-left:8px}
+.nav-tab{
+  padding:5px 14px;border-radius:6px;font-size:11px;font-weight:500;
+  color:var(--muted);cursor:pointer;border:1px solid transparent;
+  transition:all .15s;background:none;font-family:inherit;
+}
+.nav-tab:hover{color:var(--text);background:var(--s2)}
+.nav-tab.active{color:var(--text);background:var(--s2);border-color:var(--border2)}
+.nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pill{font-size:9px;font-weight:600;padding:2px 9px;border-radius:99px;
+  border:1px solid;letter-spacing:.03em;white-space:nowrap}
+.pill-g{background:rgba(31,199,106,.08);color:var(--green);border-color:rgba(31,199,106,.22)}
+.pill-a{background:var(--gold-glow);color:var(--gold);border-color:rgba(212,168,67,.25)}
+.live-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:blink 2s ease infinite;flex-shrink:0
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-status{font-size:10px;color:var(--muted);white-space:nowrap}
+.nav-status.ok{color:var(--green)}
+.nav-status.err{color:var(--red)}
+
+/* ── MAIN LAYOUT ── */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* ── LEFT SIDEBAR ── */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sb-top{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px}
+.sb-label{font-size:9px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted2);margin-bottom:6px}
+
+/* KPI cards */
+.kpi-stack{display:flex;flex-direction:column;gap:6px}
+.kpi{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;
+  position:relative;overflow:hidden;
+}
+.kpi.primary{border-color:var(--gold-dim)}
+.kpi.primary::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)
+}
+.kpi-row{display:flex;justify-content:space-between;align-items:flex-end}
+.kpi-v{font-size:20px;font-weight:700;color:var(--gold);letter-spacing:-.5px;line-height:1}
+.kpi.primary .kpi-v{font-size:24px}
+.kpi-g .kpi-v{color:var(--green)}
+.kpi-l{font-size:9px;color:var(--muted);margin-top:3px}
+.kpi-tag{font-size:9px;padding:2px 6px;border-radius:4px;
+  background:rgba(31,199,106,.12);color:var(--green);font-weight:600;
+  white-space:nowrap;flex-shrink:0}
+
+/* Cutoff buttons */
+.cutoff-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.cutoff-btns{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.cb{
+  padding:4px 10px;border-radius:5px;font-size:10px;font-weight:600;
+  border:1px solid var(--border2);background:var(--s3);
+  color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;
+}
+.cb:hover{border-color:var(--gold);color:var(--text)}
+.cb.active{
+  background:linear-gradient(135deg,#c8923a,#e8b060);
+  color:#000;border-color:transparent;
+  box-shadow:0 1px 12px rgba(212,168,67,.3);
+}
+
+/* Export */
+.export-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.export-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:8px;border-radius:6px;font-size:11px;font-weight:600;
+  background:linear-gradient(135deg,#0d3320,#10402a);
+  color:var(--green);border:1px solid rgba(31,199,106,.25);
+  cursor:pointer;transition:all .15s;text-decoration:none;font-family:inherit;
+  margin-top:7px;
+}
+.export-btn:hover{background:linear-gradient(135deg,#10402a,#145234);
+  box-shadow:0 2px 12px rgba(31,199,106,.18);color:#fff}
+.export-btn.dim{opacity:.35;pointer-events:none}
+.export-info{font-size:9px;color:var(--muted);margin-top:5px;text-align:center}
+
+/* Controls */
+.ctrl-panel{
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px;
+  overflow:visible; /* allow slider thumbs to render fully at 100% zoom */
+}
+.ctrl-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;min-width:0}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-lbl{font-size:10px;color:var(--muted);width:58px;flex-shrink:0}
+input[type=range]{flex:1;min-width:0;width:0;height:2px;accent-color:var(--gold);cursor:pointer}
+.ctrl-val{font-size:10px;font-weight:600;color:var(--text);width:28px;flex-shrink:0;text-align:right}
+
+/* Grade legend */
+.legend-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.legend-bar{
+  height:10px;border-radius:3px;margin:6px 0 4px;
+  background:linear-gradient(to right,#1800ff,#0099ff,#00ff88,#ffee00,#ff7700,#ff0000)
+}
+.legend-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted2)}
+
+/* Elev chart */
+.elev-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px;flex-shrink:0}
+
+/* ── RIGHT PANEL: tabs ── */
+.right{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.tab-content{flex:1;overflow:hidden;position:relative}
+.tab-pane{position:absolute;inset:0;overflow:auto;display:none}
+.tab-pane.active{display:flex;flex-direction:column}
+
+/* ── TAB: 3D ── */
+.viewport{flex:1;position:relative;overflow:hidden}
+#canvas3d{width:100%;height:100%;display:block}
+
+.v-overlay{
+  position:absolute;top:14px;right:14px;
+  background:rgba(7,9,14,.88);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;font-size:10px;
+  color:var(--muted);line-height:1.9;backdrop-filter:blur(8px);
+}
+.v-overlay strong{color:var(--text);display:block;
+  font-size:11px;margin-bottom:4px;letter-spacing:.02em}
+
+.v-hover{
+  position:absolute;top:14px;left:14px;
+  background:rgba(7,9,14,.92);border:1px solid var(--gold-dim);
+  border-radius:10px;padding:11px 14px;font-size:10px;
+  display:none;min-width:130px;backdrop-filter:blur(8px);
+}
+.v-hover-grade{font-size:26px;font-weight:700;color:var(--gold);line-height:1;margin:3px 0}
+.v-hover-z{font-size:10px;color:var(--muted)}
+
+.v-loading{
+  position:absolute;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;z-index:10;
+}
+.v-spinner{
+  width:36px;height:36px;border:2px solid var(--border2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.v-loadtxt{font-size:12px;color:var(--muted)}
+
+.v-hint{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(7,9,14,.75);border:1px solid var(--border);
+  border-radius:6px;padding:5px 14px;font-size:9px;color:var(--muted2);
+  pointer-events:none;white-space:nowrap;backdrop-filter:blur(4px);
+}
+
+/* ── TAB: RESULTS ── */
+.results-pane{padding:20px;gap:14px}
+
+.r-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;flex-shrink:0}
+.r-kpi{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;padding:13px 16px;position:relative;overflow:hidden;
+}
+.r-kpi.primary{border-color:var(--gold-dim)}
+.r-kpi.primary::after{content:'';position:absolute;top:0;left:0;right:0;
+  height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.r-kpi-l{font-size:9px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.r-kpi-v{font-size:24px;font-weight:700;color:var(--gold);
+  letter-spacing:-.6px;line-height:1}
+.r-kpi.primary .r-kpi-v{font-size:28px}
+.r-kpi-g .r-kpi-v{color:var(--green)}
+.r-kpi-sub{font-size:9px;color:var(--muted);margin-top:4px}
+
+.r-charts{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;flex-shrink:0}
+.r-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:15px 16px}
+.r-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.r-card-title{font-size:9px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted)}
+.r-card-badge{font-size:9px;padding:2px 7px;border-radius:99px;
+  background:var(--gold-glow);color:var(--gold);
+  border:1px solid rgba(212,168,67,.2);font-weight:500}
+
+.sens-card{background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;flex-shrink:0}
+.sens-hdr{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border-bottom:1px solid var(--border)}
+.sens-tbl{width:100%;border-collapse:collapse}
+.sens-tbl th{padding:0 16px 9px;text-align:left;font-size:9px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+.sens-tbl td{padding:10px 16px;border-top:1px solid rgba(28,42,58,.7);font-size:11px}
+.sens-tbl tr{cursor:pointer;transition:background .1s}
+.sens-tbl tr:hover td{background:var(--s2)}
+.sens-tbl tr.cur td{background:rgba(212,168,67,.05)}
+.sens-tbl tr.cur td:first-child{border-left:2px solid var(--gold);padding-left:14px}
+
+.stopes-card{background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;flex-shrink:0}
+.stopes-hdr{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border-bottom:1px solid var(--border)}
+.stopes-tbl{width:100%;border-collapse:collapse}
+.stopes-tbl th{padding:0 12px 9px;text-align:left;font-size:9px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+.stopes-tbl td{padding:8px 12px;border-top:1px solid rgba(28,42,58,.7);font-size:11px}
+.stopes-tbl tr:hover td{background:var(--s2)}
+.gpill{display:inline-flex;align-items:center;padding:2px 8px;
+  border-radius:99px;font-size:9px;font-weight:700}
+.ghi{background:var(--gold-glow);color:var(--gold)}
+.gmd{background:rgba(31,199,106,.1);color:var(--green)}
+.glo{background:rgba(40,60,80,.2);color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav">
+  <div style="display: flex; align-items: center;">
+    <div class="logo">
+      <span class="logo-au" style="letter-spacing: 1px;">AURUM</span>
+      <div class="logo-gem"></div>
+      <span style="letter-spacing: 1px;">OPT</span>
+    </div>
+    <div class="nav-sep" style="margin: 0 15px;"></div>
+    <div style="display: flex; flex-direction: column; justify-content: center; line-height: 1.1;">
+      <span style="font-size: 10px; font-weight: 600; color: var(--text); letter-spacing: 0.5px; text-transform: uppercase;">Stope Shape Optimizer</span>
+      <span style="font-size: 9px; color: var(--gold-dim); letter-spacing: 0.3px; font-style: italic;">Precision in every prism.</span>
+    </div>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('3d')">⬡ 3D Deposit</button>
+    <button class="nav-tab" onclick="showTab('results')">⬛ Results</button>
+  </div>
+  <div class="nav-right">
+    <span class="pill pill-g">Z-alignment PASS</span>
+    <span class="pill pill-a">Exact DP · Optimal</span>
+    <div class="nav-sep"></div>
+    <div class="live-dot" id="liveDot"></div>
+    <span class="nav-status loading" id="navSt">Loading…</span>
+  </div>
+</nav>
+
+<!-- ═══ BODY ═══ -->
+<div class="body">
+
+  <!-- ─── LEFT SIDEBAR ─── -->
+  <div class="sidebar">
+    <div class="sb-top">
+
+      <!-- KPIs -->
+      <div>
+        <div class="sb-label">Results</div>
+        <div class="kpi-stack">
+          <div class="kpi primary">
+            <div class="sb-label" style="margin-bottom:4px">Total gold</div>
+            <div class="kpi-v" id="s-gold">—</div>
+            <div class="kpi-l" id="s-gold-sub">Non-overlapping · verified</div>
+          </div>
+          <div class="kpi kpi-g">
+            <div class="kpi-row">
+              <div>
+                <div class="sb-label" style="margin-bottom:3px">Waste ratio</div>
+                <div class="kpi-v" id="s-waste">—</div>
+              </div>
+              <div class="kpi-tag" id="s-waste-tag">—</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div class="kpi">
+              <div class="sb-label" style="margin-bottom:3px">Stopes</div>
+              <div class="kpi-v" id="s-stopes">—</div>
+            </div>
+            <div class="kpi">
+              <div class="sb-label" style="margin-bottom:3px">Mean grade</div>
+              <div class="kpi-v" id="s-grade">—</div>
+            </div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-row">
+              <div>
+                <div class="sb-label" style="margin-bottom:3px">Runtime</div>
+                <div class="kpi-v" id="s-rt">—</div>
+              </div>
+              <div style="font-size:9px;color:var(--muted);text-align:right">
+                Scan: <span id="s-scan" style="color:var(--text)">—</span><br>
+                Z-align: <span style="color:var(--green)">PASS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cutoff -->
+      <div class="cutoff-panel">
+        <div class="sb-label">Cutoff grade</div>
+        <div class="cutoff-btns" id="cutoffBtns">
+          <button class="cb" id="btn-6"  onclick="switchTo(6)">6 g/t</button>
+          <button class="cb" id="btn-8"  onclick="switchTo(8)">8 g/t</button>
+          <button class="cb" id="btn-10" onclick="switchTo(10)">10 g/t</button>
+          <button class="cb" id="btn-12" onclick="switchTo(12)">12 g/t</button>
+        </div>
+      </div>
+
+      <!-- Run new cutoff online -->
+      <div class="export-panel">
+        <div class="sb-label">Run new cutoff</div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input type="number" id="cutoffInput"
+            placeholder="e.g. 5.5" step="0.1" min="1" max="25"
+            style="flex:1;min-width:0;padding:7px 9px;border-radius:6px;
+              background:var(--s3);border:1px solid var(--border2);
+              color:var(--text);font-size:12px;font-family:inherit;outline:none;"
+            onkeydown="if(event.key==='Enter')runOptimizer()">
+          <button onclick="runOptimizer()" style="
+            padding:7px 12px;border-radius:6px;font-size:11px;font-weight:600;
+            background:linear-gradient(135deg,var(--gold-dim),var(--gold));
+            color:#000;border:none;cursor:pointer;font-family:inherit;flex-shrink:0;">
+            Run ▶
+          </button>
+        </div>
+        <!-- Progress -->
+        <div id="runProgress" style="display:none;margin-top:8px">
+          <div style="height:3px;border-radius:99px;background:var(--border);overflow:hidden;margin-bottom:5px">
+            <div id="runBar" style="height:100%;border-radius:99px;width:0%;
+              background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .4s ease;"></div>
+          </div>
+          <div id="runMsg" style="font-size:9px;color:var(--muted);word-break:break-word"></div>
+        </div>
+      </div>
+
+      <!-- Export -->
+      <div class="export-panel">
+        <div class="sb-label">Submit DXF</div>
+        <a class="export-btn dim" id="exportBtn" href="#" download="stopes_optimised.dxf">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export stopes_optimised.dxf
+        </a>
+        <div class="export-info" id="exportInfo">Run optimizer to generate DXF</div>
+      </div>
+
+      <!-- 3D Controls -->
+      <div class="ctrl-panel" id="ctrlPanel3d">
+        <div class="sb-label">3D Controls</div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Opacity</span>
+          <input type="range" id="ctrlOpacity" min="10" max="100" value="80"
+            oninput="setOpacity(this.value)">
+          <span class="ctrl-val" id="ctrlOpacityVal">80%</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Point size</span>
+          <input type="range" id="ctrlSize" min="1" max="8" step=".5" value="2.5"
+            oninput="setSize(this.value)">
+          <span class="ctrl-val" id="ctrlSizeVal">2.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Auto-rotate</span>
+          <input type="range" id="ctrlRot" min="0" max="1" step="1" value="1"
+            oninput="setAutoRot(this.value)">
+          <span class="ctrl-val" id="ctrlRotVal">On</span>
+        </div>
+      </div>
+
+      <!-- Grade legend -->
+      <div class="legend-panel">
+        <div class="sb-label">Au Grade (g/t)</div>
+        <div class="legend-bar"></div>
+        <div class="legend-labels">
+          <span>0</span><span>5</span><span>10</span><span>15</span><span>20+</span>
+        </div>
+      </div>
+
+      <!-- Elevation chart -->
+      <div class="elev-panel">
+        <div class="sb-label">Gold by elevation (k oz)</div>
+        <div style="position:relative;height:160px;margin-top:8px">
+          <canvas id="elevChart"></canvas>
+        </div>
+      </div>
+
+    </div><!-- /sb-top -->
+  </div><!-- /sidebar -->
+
+  <!-- ─── RIGHT PANEL ─── -->
+  <div class="right">
+    <div class="tab-content">
+
+      <!-- TAB: 3D DEPOSIT -->
+      <div class="tab-pane active" id="pane-3d">
+        <div class="viewport">
+          <canvas id="canvas3d"></canvas>
+
+          <!-- Loading -->
+          <div class="v-loading" id="vLoading">
+            <div class="v-spinner"></div>
+            <span class="v-loadtxt" id="vLoadMsg">Loading block model…</span>
+          </div>
+
+          <!-- Stats overlay -->
+          <div class="v-overlay" id="vOverlay" style="display:none">
+            <strong>Block Model</strong>
+            97,250 blocks · 5m³ each<br>
+            Avg grade: 9.48 g/t<br>
+            Max grade: 22.85 g/t<br>
+            Deposit total: 10.74M oz<br>
+            Z: −417.5m → +32.5m<br>
+            <span style="color:var(--muted2);font-size:9px;margin-top:4px;display:block">
+              ↑ Deposit stats — constant<br>
+              KPIs update per cutoff →
+            </span>
+          </div>
+
+          <!-- Hover info -->
+          <div class="v-hover" id="vHover">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:2px">AU GRADE</div>
+            <div class="v-hover-grade" id="vHoverGrade">—</div>
+            <div class="v-hover-z" id="vHoverZ"></div>
+          </div>
+
+          <div class="v-hint">
+            Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp;
+            Right-drag to pan &nbsp;·&nbsp; Hover for grade
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: RESULTS -->
+      <div class="tab-pane results-pane" id="pane-results">
+
+        <!-- KPIs -->
+        <div class="r-kpis">
+          <div class="r-kpi primary">
+            <div class="r-kpi-l">Total gold captured</div>
+            <div class="r-kpi-v" id="r-gold">—</div>
+            <div class="r-kpi-sub" id="r-gold-sub">Non-overlapping · Z-compliant</div>
+          </div>
+          <div class="r-kpi r-kpi-g">
+            <div class="r-kpi-l">Waste ratio</div>
+            <div class="r-kpi-v" id="r-waste">—</div>
+            <div class="r-kpi-sub" id="r-waste-sub">—</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Economic stopes</div>
+            <div class="r-kpi-v" id="r-stopes">—</div>
+            <div class="r-kpi-sub">Non-overlapping</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Mean grade</div>
+            <div class="r-kpi-v" id="r-grade">—</div>
+            <div class="r-kpi-sub" id="r-grade-sub">—</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Runtime</div>
+            <div class="r-kpi-v" id="r-rt">—</div>
+            <div class="r-kpi-sub">Total pipeline</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="r-charts">
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Gold by elevation</span>
+              <span class="r-card-badge" id="r-elev-badge">—</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rElevChart"></canvas>
+            </div>
+          </div>
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Grade distribution</span>
+              <span class="r-card-badge">Top 20</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rGradeChart"></canvas>
+            </div>
+          </div>
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Waste vs grade</span>
+              <span class="r-card-badge" id="r-waste-badge">—</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rWasteChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensitivity table -->
+        <div class="sens-card">
+          <div class="sens-hdr">
+            <span class="r-card-title">Cutoff sensitivity — click to switch</span>
+            <span class="pill pill-a">All pre-computed</span>
+          </div>
+          <table class="sens-tbl">
+            <thead><tr>
+              <th>Cutoff</th><th>Gold oz</th><th>Waste %</th>
+              <th>Stopes</th><th>Mean grade</th><th>Ore tonnes</th>
+              <th>Runtime</th><th>Status</th>
+            </tr></thead>
+            <tbody id="sensBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Top stopes -->
+        <div class="stopes-card">
+          <div class="stopes-hdr">
+            <span class="r-card-title">Top stopes by gold</span>
+            <span class="pill pill-g">0% waste top-ranked</span>
+          </div>
+          <table class="stopes-tbl">
+            <thead><tr>
+              <th>#</th><th>X</th><th>Y</th><th>Z</th>
+              <th>Grade</th><th>Gold oz</th><th>Ore t</th><th>Waste</th>
+            </tr></thead>
+            <tbody id="stopesBody"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /pane-results -->
+    </div><!-- /tab-content -->
+  </div><!-- /right -->
+</div><!-- /body -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   GRADE COLOUR + CACHE HELPER
+════════════════════════════════════════════════════════════════════ */
+// Single cache-buster so all fetches share the same version token
+const CACHE_TAG = Date.now().toString();
+function nocache(url){
+  return url + (url.includes('?') ? '&' : '?') + 'v=' + CACHE_TAG;
+}
+function gradeRGB(au) {
+  const t = Math.min(au / 20, 1);
+  const stops = [
+    [0,   [24,  0,   255]],
+    [0.2, [0,   153, 255]],
+    [0.4, [0,   255, 136]],
+    [0.6, [255, 238, 0  ]],
+    [0.8, [255, 119, 0  ]],
+    [1.0, [255, 0,   0  ]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0,c0] = stops[i], [t1,c1] = stops[i+1];
+    if (t >= t0 && t <= t1) {
+      const f = (t-t0)/(t1-t0);
+      return [
+        (c0[0]+(c1[0]-c0[0])*f)/255,
+        (c0[1]+(c1[1]-c0[1])*f)/255,
+        (c0[2]+(c1[2]-c0[2])*f)/255,
+      ];
+    }
+  }
+  return [1,0,0];
+}
+function gradeCss(au) {
+  const [r,g,b] = gradeRGB(au);
+  return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   THREE.JS
+════════════════════════════════════════════════════════════════════ */
+const canvas3d  = document.getElementById('canvas3d');
+const renderer  = new THREE.WebGLRenderer({canvas:canvas3d, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x07090e, 1);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.001, 200);
+camera.position.set(2.4, 0.9, 2.4);
+camera.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff, .8));
+const dl = new THREE.DirectionalLight(0xffffff, .4);
+dl.position.set(5,5,5); scene.add(dl);
+const ax = new THREE.AxesHelper(.6);
+ax.material.opacity = .15; ax.material.transparent = true; scene.add(ax);
+
+// Orbit
+let drag=false, rclick=false, ox=0, oy=0;
+let theta=.8, phi=.55, radius=3.2, panX=0, panY=0;
+let autoRot = true;
+function updCam() {
+  camera.position.set(
+    radius*Math.sin(phi)*Math.cos(theta)+panX,
+    radius*Math.cos(phi)+panY,
+    radius*Math.sin(phi)*Math.sin(theta)
+  );
+  camera.lookAt(panX,panY,0);
+}
+updCam();
+canvas3d.addEventListener('mousedown', e => {
+  drag=true; rclick=e.button===2; ox=e.clientX; oy=e.clientY;
+});
+canvas3d.addEventListener('contextmenu', e=>e.preventDefault());
+window.addEventListener('mouseup', ()=>drag=false);
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const dx=(e.clientX-ox)*.005, dy=(e.clientY-oy)*.005;
+  if (rclick){panX-=dx*.4;panY+=dy*.4;}
+  else{theta-=dx; phi=Math.max(.05,Math.min(Math.PI-.05,phi+dy));}
+  ox=e.clientX; oy=e.clientY; updCam();
+});
+canvas3d.addEventListener('wheel', e=>{
+  radius=Math.max(.3,Math.min(10,radius+e.deltaY*.004));
+  updCam(); e.preventDefault();
+},{passive:false});
+
+// Resize
+function resizeRenderer(){
+  const w=canvas3d.clientWidth, h=canvas3d.clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resizeRenderer).observe(canvas3d); resizeRenderer();
+
+// Raycaster
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = .024;
+const mouse = new THREE.Vector2(-9999,-9999);
+canvas3d.addEventListener('mousemove', e=>{
+  const r=canvas3d.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)/r.width*2-1;
+  mouse.y=-(e.clientY-r.top)/r.height*2+1;
+});
+
+// Point cloud
+let pm=null, POINTS=[], fullAU=null, curMin=0;
+
+function initCloud() {
+  if (pm){scene.remove(pm);pm.geometry.dispose();pm.material.dispose();}
+  const n=POINTS.length;
+  const pos=new Float32Array(n*3), col=new Float32Array(n*3);
+  fullAU=new Float32Array(n);
+  POINTS.forEach((p,i)=>{
+    pos[i*3]=p.nx; pos[i*3+1]=p.ny; pos[i*3+2]=p.nz;
+    fullAU[i]=p.AU;
+    const[r,g,b]=gradeRGB(p.AU);
+    col[i*3]=r; col[i*3+1]=g; col[i*3+2]=b;
+  });
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',   new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({
+    size: +document.getElementById('ctrlSize').value*.01,
+    vertexColors:true, transparent:true,
+    opacity: +document.getElementById('ctrlOpacity').value/100,
+    sizeAttenuation:true,
+  });
+  pm=new THREE.Points(geo,mat); scene.add(pm);
+}
+
+function applyFilter(minG) {
+  curMin=minG;
+  if (!pm||!fullAU) return;
+  const arr=pm.geometry.getAttribute('color').array;
+  for (let i=0;i<fullAU.length;i++) {
+    if (fullAU[i]>=minG){
+      const[r,g,b]=gradeRGB(fullAU[i]);
+      arr[i*3]=r; arr[i*3+1]=g; arr[i*3+2]=b;
+    } else { arr[i*3]=0; arr[i*3+1]=0; arr[i*3+2]=0; }
+  }
+  pm.geometry.getAttribute('color').needsUpdate=true;
+}
+
+// Render loop
+let frame=0;
+(function loop(){
+  requestAnimationFrame(loop); frame++;
+  if (autoRot&&frame%2===0){theta+=.003;updCam();}
+  if (frame%6===0&&pm){
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObject(pm);
+    const hv=document.getElementById('vHover');
+    const hit=hits.find(h=>POINTS[h.index]&&POINTS[h.index].AU>=curMin);
+    if (hit){
+      const p=POINTS[hit.index];
+      tt('vHoverGrade',p.AU.toFixed(2)+' g/t');
+      if (p.origZ) tt('vHoverZ','Z: '+p.origZ+'m');
+      hv.style.display='block';
+    } else hv.style.display='none';
+  }
+  renderer.render(scene,camera);
+})();
+
+// 3D controls
+function setOpacity(v){
+  tt('ctrlOpacityVal',v+'%');
+  if(pm) pm.material.opacity=v/100;
+}
+function setSize(v){
+  tt('ctrlSizeVal',v);
+  if(pm) pm.material.size=v*.01;
+}
+function setAutoRot(v){
+  autoRot=!!+v;
+  tt('ctrlRotVal',autoRot?'On':'Off');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DATA & STATE
+════════════════════════════════════════════════════════════════════ */
+const KNOWN=[6,8,10,12], CUTOFFS=[...KNOWN];
+const cache={};
+let active=null;
+let rElevC, rGradeC, rWasteC;
+
+// When dashboard.html is served from /static/ (or opened directly),
+// the results files typically live one folder up (project root).
+// When served from Flask at "/", results are served from /data at the same URL root.
+const LOCAL_DATA_PREFIX =
+  (!['localhost','127.0.0.1',''].includes(location.hostname) ? '' :
+   (location.protocol === 'file:' || /\/static\//i.test(location.pathname)) ? '..' : '');
+
+function cutoffStr(c){return String(parseFloat(c));}
+function jsonFile(c){return `${LOCAL_DATA_PREFIX}/results_${cutoffStr(c)}gt.json`;}
+function btnId(c){return `btn-${String(c).replace('.','_')}`;}
+function rowId(c){return `row-${String(c).replace('.','_')}`;}
+
+function tt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function setNav(msg,cls){
+  tt('navSt',msg);
+  document.getElementById('navSt').className='nav-status '+cls;
+  const d=document.getElementById('liveDot');
+  d.style.background=cls==='ok'?'var(--green)':cls==='err'?'var(--red)':'var(--gold)';
+  d.style.boxShadow='0 0 8px '+d.style.background;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════════════════════ */
+window.addEventListener('load', async () => {
+  buildSensTable(KNOWN);
+
+  // ── 3D points ──────────────────────────────────────────────────
+  try {
+    tt('vLoadMsg', 'Loading points3d.json…');
+    const r = await fetch(nocache('points3d.json'));
+    if (!r.ok) throw new Error(`points3d.json → HTTP ${r.status}`);
+    POINTS = await r.json();
+    initCloud(); applyFilter(0);
+    document.getElementById('vLoading').style.display  = 'none';
+    document.getElementById('vOverlay').style.display  = 'block';
+  } catch(e) {
+    console.warn('3D points not loaded:', e.message);
+    tt('vLoadMsg', 'Generating deposit preview…');
+    buildFallbackCloud();
+    document.getElementById('vLoading').style.display  = 'none';
+    document.getElementById('vOverlay').style.display  = 'block';
+  }
+
+  // ── results.json (latest run) ──────────────────────────────────
+  let latestLoaded = false;
+  try {
+    const r = await fetch(nocache(`${LOCAL_DATA_PREFIX}/results.json`));
+    if (!r.ok) throw new Error(`results.json → HTTP ${r.status} ${r.statusText}`);
+    const d = await r.json();
+    if (!d || d.cutoff === undefined) throw new Error('results.json is missing cutoff field');
+    cache[d.cutoff] = d;
+    if (!CUTOFFS.includes(d.cutoff)) { CUTOFFS.push(d.cutoff); addBtn(d.cutoff); addSensRow(d.cutoff); }
+    setSensRow(d.cutoff, d);
+    switchTo(d.cutoff);
+    setNav(`${d.cutoff} g/t · ${d.stope_count.toLocaleString()} stopes · PASS`, 'ok');
+    latestLoaded = true;
+  } catch(e) {
+    console.error('results.json load failed:', e.message);
+    setNav('No results yet — type a cutoff and click Run ▶', 'err');
+  }
+
+  // ── Pre-load known cutoffs silently ───────────────────────────
+  KNOWN.forEach(c => loadJSON(c, false));
+
+  // ── results_index.json — discover all previously run cutoffs ──
+  try {
+    const r = await fetch(nocache(`${LOCAL_DATA_PREFIX}/results_index.json`));
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data.cutoffs)) {
+        data.cutoffs.forEach(c => {
+          if (!CUTOFFS.includes(c)) { CUTOFFS.push(c); addBtn(c); addSensRow(c); }
+          loadJSON(c, false);
+        });
+      }
+    }
+  } catch(e) {
+    console.warn('results_index.json:', e.message);
+  }
+});
+
+function buildFallbackCloud(){
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  POINTS=Array.from({length:6000},()=>{
+    const z=rnd(-.5,.5), r=.7*(1-Math.abs(z)*.5)*rnd(.3,1), a=rnd(0,Math.PI*2);
+    return{nx:r*Math.cos(a)*rnd(.6,1),ny:z,nz:r*Math.sin(a)*.7,AU:rnd(0,22),origZ:null};
+  });
+  initCloud(); applyFilter(0);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   LOAD JSON
+════════════════════════════════════════════════════════════════════ */
+function loadJSON(c,show){
+  if(cache[c]){if(show)switchTo(c);return;}
+  fetch(nocache(jsonFile(c)))
+    .then(r=>{if(!r.ok)throw new Error();return r.json();})
+    .then(d=>{
+      cache[c]=d;
+      if(!CUTOFFS.includes(c)){CUTOFFS.push(c);addBtn(c);addSensRow(c);}
+      setSensRow(c,d);
+      if(show)switchTo(c);
+    })
+    .catch(()=>{setSensRow(c,null);if(show)setNav(`${jsonFile(c)} not found`,'err');});
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SWITCH CUTOFF
+════════════════════════════════════════════════════════════════════ */
+function switchTo(c){
+  active=c;
+  document.querySelectorAll('.cb').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById(btnId(c));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.sens-tbl tbody tr').forEach(r=>r.classList.remove('cur'));
+  const row=document.getElementById(rowId(c));
+  if(row) row.classList.add('cur');
+  if(cache[c]) render(c);
+  else{setNav(`Loading ${jsonFile(c)}…`,'loading');loadJSON(c,true);}
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════════════════════════ */
+function render(c){
+  const d=cache[c]; if(!d)return;
+  const cs=cutoffStr(c);
+
+  setNav(`${c} g/t · ${d.stope_count.toLocaleString()} stopes · Z-alignment PASS`,'ok');
+
+  // Update 3D filter
+  applyFilter(c);
+
+  // Export button
+  const eb=document.getElementById('exportBtn');
+  eb.href=`${LOCAL_DATA_PREFIX}/outputs/stopes_optimised.dxf`;
+  eb.download=`stopes_optimised_${cs}gt.dxf`;
+  eb.classList.remove('dim');
+  tt('exportInfo',`stopes_optimised.dxf · ${cs} g/t`);
+
+  // Sidebar KPIs
+  tt('s-gold',   (d.gold_oz/1e6).toFixed(3)+'M oz');
+  tt('s-gold-sub',(d.gold_grams/1e6).toFixed(1)+'M g');
+  tt('s-waste',  d.waste_pct+'%');
+  tt('s-waste-tag',d.waste_tonnes.toLocaleString()+' t');
+  tt('s-stopes', d.stope_count.toLocaleString());
+  tt('s-grade',  d.mean_grade+' g/t');
+  tt('s-rt',     d.total_time_s+'s');
+  tt('s-scan',   d.scan_time_s+'s');
+
+  // Results tab KPIs
+  tt('r-gold',   (d.gold_oz/1e6).toFixed(3)+'M oz');
+  tt('r-gold-sub',(d.gold_grams/1e6).toFixed(1)+'M g · non-overlapping');
+  tt('r-waste',  d.waste_pct+'%');
+  tt('r-waste-sub',d.waste_tonnes.toLocaleString()+' t waste');
+  tt('r-stopes', d.stope_count.toLocaleString());
+  tt('r-grade',  d.mean_grade+' g/t');
+  tt('r-grade-sub','Max '+d.max_grade+' g/t');
+  tt('r-rt',     d.total_time_s+'s');
+
+  // Chart badges
+  tt('r-elev-badge', d.z_elevations.length+' levels');
+  tt('r-waste-badge', d.waste_pct+'% waste');
+
+  // Elevation chart sidebar
+  buildElevChart('elevChart', d, true);
+  // Results tab charts
+  buildElevChart('rElevChart', d, false);
+  buildGradeChart(d);
+  buildWasteChart(d);
+  buildTable(d);
+  buildMeta(d,c);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CHARTS
+════════════════════════════════════════════════════════════════════ */
+const COPTS={responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false}},animation:{duration:250}};
+
+let elevSideChart=null;
+function buildElevChart(canvasId,d,isSidebar){
+  const elev=d.by_elevation;
+  const inst=isSidebar?'elevSideChart':'rElevC';
+  if(window[inst]) window[inst].destroy();
+  window[inst]=new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{
+      labels:elev.map(e=>e.z+'m'),
+      datasets:[{
+        data:elev.map(e=>Math.round(e.gold_oz)),
+        backgroundColor:elev.map(e=>
+          e.avg_grade>=13?'#d4a843':e.avg_grade>=10?'#1fc76a':'#3d9be0'),
+        borderRadius:2,borderSkipped:false,barPercentage:.85,
+      }]
+    },
+    options:{...COPTS,scales:{
+      x:{ticks:{color:'#3d5268',font:{size:7},maxRotation:45,autoSkip:false},grid:{display:false}},
+      y:{ticks:{color:'#3d5268',font:{size:8},callback:v=>(v/1000).toFixed(0)+'k'},
+         grid:{color:'#111720'}},
+    }}
+  });
+}
+
+function buildGradeChart(d){
+  const b={};
+  d.top20_stopes.forEach(s=>{const k=Math.floor(s.WAVG_GRADE);b[k]=(b[k]||0)+1;});
+  const keys=Object.keys(b).sort((a,z)=>+a-+z);
+  if(rGradeC) rGradeC.destroy();
+  rGradeC=new Chart(document.getElementById('rGradeChart'),{
+    type:'bar',
+    data:{
+      labels:keys.map(k=>k+'–'+(+k+1)),
+      datasets:[{
+        data:keys.map(k=>b[k]),
+        backgroundColor:keys.map(k=>+k>=16?'#d4a843':+k>=12?'#1fc76a':'#3d9be0'),
+        borderRadius:3,borderSkipped:false,
+      }]
+    },
+    options:{...COPTS,scales:{
+      x:{ticks:{color:'#3d5268',font:{size:9}},grid:{display:false}},
+      y:{ticks:{color:'#3d5268',font:{size:9}},grid:{color:'#111720'}},
+    }}
+  });
+}
+
+function buildWasteChart(d){
+  const pts=d.top20_stopes.map(s=>({
+    x:s.WAVG_GRADE,
+    y:s.WASTE_RATIO?+(s.WASTE_RATIO*100).toFixed(1):0,
+  }));
+  if(rWasteC) rWasteC.destroy();
+  rWasteC=new Chart(document.getElementById('rWasteChart'),{
+    type:'scatter',
+    data:{datasets:[{
+      data:pts,
+      backgroundColor:pts.map(p=>p.y===0?'rgba(31,199,106,.75)':'rgba(212,168,67,.7)'),
+      pointRadius:5,pointHoverRadius:7,
+    }]},
+    options:{...COPTS,scales:{
+      x:{title:{display:true,text:'Grade (g/t)',color:'#3d5268',font:{size:9}},
+         ticks:{color:'#3d5268',font:{size:9}},grid:{color:'#111720'}},
+      y:{title:{display:true,text:'Waste %',color:'#3d5268',font:{size:9}},
+         ticks:{color:'#3d5268',font:{size:9}},grid:{color:'#111720'}},
+    },
+    plugins:{...COPTS.plugins,tooltip:{callbacks:{
+      label:ctx=>`Grade: ${ctx.raw.x.toFixed(2)} g/t · Waste: ${ctx.raw.y}%`
+    }}}}
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   STOPES TABLE + META
+════════════════════════════════════════════════════════════════════ */
+function buildTable(d){
+  document.getElementById('stopesBody').innerHTML=
+    d.top20_stopes.slice(0,15).map((s,i)=>{
+      const wr=s.WASTE_RATIO?(s.WASTE_RATIO*100).toFixed(1):'0.0';
+      const cls=s.WAVG_GRADE>=16?'ghi':s.WAVG_GRADE>=12?'gmd':'glo';
+      return`<tr>
+        <td style="color:var(--muted2);font-weight:600">${i+1}</td>
+        <td style="color:var(--muted);font-size:10px">${s.X_ORIGIN}</td>
+        <td style="color:var(--muted);font-size:10px">${s.Y_ORIGIN}</td>
+        <td style="color:var(--muted);font-size:10px">${s.Z_ORIGIN}</td>
+        <td><span class="gpill ${cls}">${s.WAVG_GRADE.toFixed(2)} g/t</span></td>
+        <td style="font-weight:700;color:var(--gold)">${Math.round(s.GOLD_OZ).toLocaleString()}</td>
+        <td style="color:var(--muted);font-size:10px">${Math.round(s.ORE_TONNES).toLocaleString()}</td>
+        <td style="color:${wr==='0.0'?'var(--green)':'var(--muted)'};font-weight:${wr==='0.0'?'600':'400'}">${wr}%</td>
+      </tr>`;
+    }).join('');
+}
+
+function buildMeta(d,c){}  // meta now in KPI cards
+
+/* ════════════════════════════════════════════════════════════════════
+   SENSITIVITY TABLE
+════════════════════════════════════════════════════════════════════ */
+function buildSensTable(cutoffs){
+  document.getElementById('sensBody').innerHTML=cutoffs.map(c=>sensRow(c)).join('');
+}
+function sensRow(c){
+  const cs=cutoffStr(c);
+  return`<tr id="${rowId(c)}" data-c="${c}"
+            class="${c===active?'cur':''}"
+            onclick="switchTo(${c})">
+    <td style="font-weight:700;color:var(--gold)">${c} g/t</td>
+    <td id="s2-gold-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-waste-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-stopes-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-grade-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-ore-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-time-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-stat-${cs}">
+      <span style="font-size:9px;color:var(--muted2)">loading…</span>
+    </td>
+  </tr>`;
+}
+function addSensRow(c){
+  document.getElementById('sensBody').insertAdjacentHTML('beforeend',sensRow(c));
+}
+function setSensRow(c,d){
+  const cs=cutoffStr(c);
+  if(!document.getElementById(`s2-gold-${cs}`)) return;
+  if(d){
+    tt(`s2-gold-${cs}`,  (d.gold_oz/1e6).toFixed(3)+'M oz');
+    tt(`s2-waste-${cs}`, d.waste_pct+'%');
+    tt(`s2-stopes-${cs}`,d.stope_count.toLocaleString());
+    tt(`s2-grade-${cs}`, d.mean_grade+' g/t');
+    tt(`s2-ore-${cs}`,   d.ore_tonnes?(d.ore_tonnes/1e6).toFixed(1)+'M t':'—');
+    tt(`s2-time-${cs}`,  d.total_time_s+'s');
+    document.getElementById(`s2-stat-${cs}`).innerHTML=
+      `<span style="font-size:9px;color:var(--green);font-weight:700">✓ Ready</span>`;
+  } else {
+    document.getElementById(`s2-stat-${cs}`).innerHTML=
+      `<span style="font-size:9px;color:var(--muted2)">Run optimizer</span>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DYNAMIC BUTTONS
+════════════════════════════════════════════════════════════════════ */
+function addBtn(c){
+  if(document.getElementById(btnId(c))) return;
+  const b=document.createElement('button');
+  b.className='cb'; b.id=btnId(c);
+  b.textContent=c+' g/t';
+  b.onclick=()=>switchTo(c);
+  document.getElementById('cutoffBtns').appendChild(b);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════════════════════════════ */
+function showTab(name){
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>
+    t.classList.toggle('active',['3d','results'][i]===name));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`pane-${name}`).classList.add('active');
+  // Show 3D controls only on 3D tab
+  document.getElementById('ctrlPanel3d').style.display =
+    name === '3d' ? 'block' : 'none';
+  // Resize renderer when switching to 3D
+  if(name==='3d') setTimeout(resizeRenderer,10);
+}
+
+// Set initial state on load
+document.getElementById('ctrlPanel3d').style.display = 'block';
+
+/* ════════════════════════════════════════════════════════════════════
+   ONLINE MODE — works on Render, silently skipped on localhost
+════════════════════════════════════════════════════════════════════ */
+const IS_ONLINE = !['localhost','127.0.0.1',''].includes(location.hostname);
+
+// Patch render() to update export button with correct URL
+const _origRender = window.render || render;
+function render(c) {
+  _origRender(c);
+  // Update export button
+  const eb  = document.getElementById('exportBtn');
+  const inf = document.getElementById('exportInfo');
+  const cs  = cutoffStr(c);
+  if (IS_ONLINE) {
+    eb.href     = `/api/dxf/${cs}`;
+    eb.download = `stopes_optimised_${cs}gt.dxf`;
+  } else {
+    eb.href     = `outputs/stopes_optimised.dxf`;
+    eb.download = `stopes_optimised_${cs}gt.dxf`;
+  }
+  eb.classList.remove('dim');
+  if (inf) inf.textContent = `stopes_optimised_${cs}gt.dxf — ready`;
+}
+
+// Patch jsonFile to use API endpoint when online
+if (IS_ONLINE) {
+  window.jsonFile = c => `/api/results/results_${cutoffStr(c)}gt.json`;
+  window.nocache  = url => url; // server handles caching
+}
+
+let pollTimer = null;
+
+async function runOptimizer() {
+  const input  = document.getElementById('cutoffInput');
+  const cutoff = parseFloat(input.value);
+
+  if (isNaN(cutoff) || cutoff <= 0 || cutoff > 25) {
+    input.style.borderColor = 'var(--red)';
+    setTimeout(() => input.style.borderColor = 'var(--border2)', 1500);
+    return;
+  }
+
+  if (!IS_ONLINE) {
+    setNav('You are running locally — use the terminal to run the optimizer', 'err');
+    return;
+  }
+
+  // Show progress
+  const prog = document.getElementById('runProgress');
+  const bar  = document.getElementById('runBar');
+  const msg  = document.getElementById('runMsg');
+  prog.style.display = 'block';
+  bar.style.width    = '4%';
+  msg.textContent    = `Sending request for ${cutoff} g/t…`;
+  msg.style.color    = 'var(--muted)';
+  setNav(`Starting optimizer for ${cutoff} g/t…`, 'loading');
+
+  // POST /api/run
+  let startResp;
+  try {
+    const r = await fetch('/api/run', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({cutoff})
+    });
+    startResp = await r.json();
+    if (!startResp.ok) {
+      msg.textContent    = '✗ ' + startResp.error;
+      msg.style.color    = 'var(--red)';
+      setNav(startResp.error, 'err');
+      return;
+    }
+    msg.textContent = startResp.message;
+  } catch(e) {
+    msg.textContent = '✗ Could not reach server: ' + e.message;
+    msg.style.color = 'var(--red)';
+    setNav('Server unreachable', 'err');
+    return;
+  }
+
+  // Poll /api/status every 2s
+  let pct = 4;
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const r    = await fetch('/api/status');
+      const data = await r.json();
+
+      msg.textContent = data.message || '…';
+
+      if (data.status === 'running') {
+        pct = Math.min(pct + 4, 88);
+        bar.style.width = pct + '%';
+        msg.style.color = 'var(--muted)';
+      }
+
+      if (data.status === 'done') {
+        clearInterval(pollTimer);
+        bar.style.width = '100%';
+        msg.style.color = 'var(--green)';
+
+        // Fetch the new results JSON directly from API
+        const c  = data.cutoff;
+        const cs = cutoffStr(c);
+        try {
+          const rj = await fetch(`/api/results/results_${cs}gt.json`);
+          if (!rj.ok) throw new Error(`HTTP ${rj.status}`);
+          const d = await rj.json();
+          if (!d || d.cutoff === undefined) throw new Error('Invalid JSON — missing cutoff');
+
+          cache[c] = d;
+          if (!CUTOFFS.includes(c)) { CUTOFFS.push(c); addBtn(c); addSensRow(c); }
+          setSensRow(c, d);
+          switchTo(c);
+          setNav(`${c} g/t · ${d.stope_count.toLocaleString()} stopes · PASS`, 'ok');
+        } catch(e) {
+          msg.textContent = '✗ Could not load results: ' + e.message;
+          msg.style.color = 'var(--red)';
+          setNav('Run done but failed to load results: ' + e.message, 'err');
+        }
+
+        setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 3000);
+      }
+
+      if (data.status === 'error') {
+        clearInterval(pollTimer);
+        bar.style.width    = '0%';
+        msg.textContent    = '✗ ' + data.message;
+        msg.style.color    = 'var(--red)';
+        setNav('Optimizer error — check message below', 'err');
+      }
+
+    } catch(e) {
+      // poll failed — show but keep polling
+      msg.textContent = 'Polling… ' + e.message;
+    }
+  }, 2000);
+}
+</script>
+</body>
+</html>
