@@ -206,6 +206,24 @@ def api_dxf(cs):
     return jsonify({"error": "DXF not found"}), 404
 
 
+@app.route("/debug")
+def debug():
+    """Temporary debug — remove after fixing."""
+    import glob
+    base = Path(__file__).resolve().parent
+    all_json = list(base.rglob("*.json"))
+    return jsonify({
+        "base_dir": str(base),
+        "cwd": os.getcwd(),
+        "data_dir": str(DATA_DIR),
+        "data_exists": DATA_DIR.exists(),
+        "data_files": [f.name for f in DATA_DIR.iterdir()] if DATA_DIR.exists() else [],
+        "all_json_files": [str(f) for f in all_json],
+        "csv_exists": CSV_PATH.exists(),
+        "csv_path": str(CSV_PATH),
+    })
+
+
 @app.route("/api/results/<path:filename>")
 def api_results(filename):
     """Dashboard fetches /api/results/results_Xgt.json — serve from DATA_DIR."""
