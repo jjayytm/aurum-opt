@@ -206,10 +206,39 @@ def api_dxf(cs):
     return jsonify({"error": "DXF not found"}), 404
 
 
+@app.route("/api/results/<path:filename>")
+def api_results(filename):
+    """Dashboard fetches /api/results/results_Xgt.json — serve from DATA_DIR."""
+    p = DATA_DIR / filename
+    if p.exists():
+        return send_from_directory(str(DATA_DIR), filename)
+    return jsonify({"error": f"{filename} not found — run optimizer first"}), 404
+
+
+@app.route("/api/debug")
+def api_debug():
+    """Check what files exist on the server — useful for troubleshooting."""
+    data_files   = [f.name for f in DATA_DIR.iterdir()] if DATA_DIR.exists() else []
+    static_files = [f.name for f in STATIC_DIR.iterdir()] if STATIC_DIR.exists() else []
+    # Search for CSV in multiple locations
+    csv_locations = [
+        BASE_DIR / "Hackathon 2026 - Block Model.csv",
+        BASE_DIR / "hackathon_2026_block_model.csv",
+        Path("/opt/render/project/src") / "Hackathon 2026 - Block Model.csv",
+    ]
+    csv_found = {str(p): p.exists() for p in csv_locations}
+    return jsonify({
+        "base_dir":    str(BASE_DIR),
+        "csv_path":    str(CSV_PATH),
+        "csv_exists":  CSV_PATH.exists(),
+        "csv_search":  csv_found,
+        "data_files":  data_files,
+        "static_files": static_files,
+    })
+
+
 # ══════════════════════════════════════════════════════════════════════════════
-# FILE SERVING — all JSON requests come here
-# The dashboard fetches: results.json, results_Xgt.json, results_index.json
-# All served from DATA_DIR
+# FILE SERVING
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
@@ -219,17 +248,14 @@ def index():
 
 @app.route("/<path:filename>")
 def catch_all(filename):
-    # 1. Static files (dashboard.html, points3d.json, etc.)
+    # 1. Static files
     p = STATIC_DIR / filename
     if p.exists():
         return send_from_directory(str(STATIC_DIR), filename)
-
-    # 2. Everything else comes from DATA_DIR
-    #    This covers results.json, results_10gt.json, results_index.json
+    # 2. Data files (results.json, results_Xgt.json, results_index.json)
     p = DATA_DIR / filename
     if p.exists():
         return send_from_directory(str(DATA_DIR), filename)
-
     return jsonify({"error": f"{filename} not found"}), 404
 
 
