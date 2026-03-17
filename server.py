@@ -3,6 +3,7 @@ AURUM-OPT — Flask API Server for Render.com
 """
 import os, sys, json, threading, time, traceback, shutil
 from pathlib import Path
+import re
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 
@@ -20,6 +21,47 @@ sys.path.insert(0, str(SRC_DIR))
 
 app = Flask(__name__)
 CORS(app)
+
+_RESULTS_RE = re.compile(r"^results_(?P<cutoff>\d+(?:\.\d+)?)gt\.json$")
+
+def _parse_cutoff_from_filename(name: str):
+    m = _RESULTS_RE.match(name)
+    if not m:
+        return None
+    try:
+        return float(m.group("cutoff"))
+    except Exception:
+        return None
+
+def bootstrap_precomputed_results():
+    """
+    Ensure the dashboard can load precomputed results during local dev.
+
+    The UI requests `/results_<cutoff>gt.json` and `/results_index.json` from the URL
+    root; this server serves those from `data/`. If precomputed files exist in the
+    project root, we sync them into `data/` (non-destructive) and rebuild the index.
+    """
+    try:
+        # 1) Sync any root results*.json into data/ if missing there.
+        for src in BASE_DIR.glob("results*.json"):
+            dst = DATA_DIR / src.name
+            if not dst.exists():
+                shutil.copy2(str(src), str(dst))
+
+        # 2) Rebuild results_index.json from whatever exists in data/.
+        cutoffs = []
+        for p in DATA_DIR.glob("results_*gt.json"):
+            c = _parse_cutoff_from_filename(p.name)
+            if c is not None:
+                cutoffs.append(c)
+        cutoffs = sorted(set(cutoffs))
+        (DATA_DIR / "results_index.json").write_text(json.dumps({"cutoffs": cutoffs}, indent=2))
+    except Exception:
+        # Never prevent server start.
+        print("[bootstrap] failed to sync precomputed results", flush=True)
+        traceback.print_exc()
+
+bootstrap_precomputed_results()
 
 job = {"running":False,"cutoff":None,"status":"idle","message":"","started":None,"elapsed":None}
 job_lock = threading.Lock()

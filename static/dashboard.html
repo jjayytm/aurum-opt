@@ -790,6 +790,15 @@ function setNav(msg,cls){
    BOOT
 ════════════════════════════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
+  // If opened as a local file, browsers block fetch() to sibling JSON files.
+  // Show an explicit message instead of "no data detected".
+  if (location.protocol === 'file:') {
+    setNav('Open via server: http://127.0.0.1:8080 (not file://)', 'err');
+    tt('vLoadMsg', 'Open via http://127.0.0.1:8080 to load data.');
+    document.getElementById('vOverlay').style.display  = 'block';
+    return;
+  }
+
   buildSensTable(KNOWN);
 
   // ── 3D points ──────────────────────────────────────────────────
@@ -888,9 +897,9 @@ function switchTo(c){
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   RENDER
+   RENDER (base)
 ════════════════════════════════════════════════════════════════════ */
-function render(c){
+function renderBase(c){
   const d=cache[c]; if(!d)return;
   const cs=cutoffStr(c);
 
@@ -1119,8 +1128,9 @@ document.getElementById('ctrlPanel3d').style.display = 'block';
 ════════════════════════════════════════════════════════════════════ */
 const IS_ONLINE = !['localhost','127.0.0.1',''].includes(location.hostname);
 
-// Patch render() to update export button with correct URL
-const _origRender = window.render || render;
+// Patch render() to update export button with correct URL.
+// IMPORTANT: keep a separate base function to avoid recursion.
+const _origRender = renderBase;
 function render(c) {
   _origRender(c);
   // Update export button
