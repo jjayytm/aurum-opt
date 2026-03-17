@@ -8,8 +8,8 @@
   "stope_count": 3026,
   "mean_grade": 11.9,
   "max_grade": 18.55,
-  "scan_time_s": 0.25,
-  "total_time_s": 4.28,
+  "scan_time_s": 0.21,
+  "total_time_s": 4.03,
   "z_elevations": [
     -407.5,
     -377.5,
