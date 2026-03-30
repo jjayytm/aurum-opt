@@ -19,7 +19,6 @@ outputs/
 results.json
 results_*.json
 results_index.json
-points3d.json
 uploaded_*.csv
 assets/
 
