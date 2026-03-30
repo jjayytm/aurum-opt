@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>AURUM-OPT — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#d4a843;--gold-dim:#9a7530;--gold-glow:rgba(212,168,67,.15);
+  --bg:#07090e;--s1:#0c1018;--s2:#111720;--s3:#161f2b;
+  --border:#1c2a3a;--border2:#243344;
+  --text:#dde8f5;--muted:#5a7090;--muted2:#3d5268;
+  --green:#1fc76a;--green-dim:rgba(31,199,106,.12);
+  --red:#e84040;--blue:#3d9be0;
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);
+  color:var(--text);font-size:12px;line-height:1.5;
+  height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── NAV ── */
+.nav{
+  height:50px;flex-shrink:0;
+  background:rgba(7,9,14,.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+  position:relative;z-index:50;
+}
+.logo{font-size:16px;font-weight:700;letter-spacing:-.4px;
+  display:flex;align-items:center;gap:3px;flex-shrink:0}
+.logo-au{color:var(--gold)}
+.logo-gem{
+  width:14px;height:14px;
+  background:linear-gradient(135deg,var(--gold),#f0d080);
+  clip-path:polygon(50% 0%,100% 35%,80% 100%,20% 100%,0% 35%);
+  margin:0 1px;flex-shrink:0
+}
+.nav-sep{width:1px;height:18px;background:var(--border2);flex-shrink:0}
+.nav-sub{font-size:10px;color:var(--muted);white-space:nowrap}
+.nav-tabs{display:flex;gap:2px;margin-left:8px}
+.nav-tab{
+  padding:5px 14px;border-radius:6px;font-size:11px;font-weight:500;
+  color:var(--muted);cursor:pointer;border:1px solid transparent;
+  transition:all .15s;background:none;font-family:inherit;
+}
+.nav-tab:hover{color:var(--text);background:var(--s2)}
+.nav-tab.active{color:var(--text);background:var(--s2);border-color:var(--border2)}
+.nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pill{font-size:9px;font-weight:600;padding:2px 9px;border-radius:99px;
+  border:1px solid;letter-spacing:.03em;white-space:nowrap}
+.pill-g{background:rgba(31,199,106,.08);color:var(--green);border-color:rgba(31,199,106,.22)}
+.pill-a{background:var(--gold-glow);color:var(--gold);border-color:rgba(212,168,67,.25)}
+.live-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:blink 2s ease infinite;flex-shrink:0
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-status{font-size:10px;color:var(--muted);white-space:nowrap}
+.nav-status.ok{color:var(--green)}
+.nav-status.err{color:var(--red)}
+
+/* ── MAIN LAYOUT ── */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* ── LEFT SIDEBAR ── */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sb-top{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px}
+.sb-label{font-size:9px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted2);margin-bottom:6px}
+
+/* KPI cards */
+.kpi-stack{display:flex;flex-direction:column;gap:6px}
+.kpi{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;
+  position:relative;overflow:hidden;
+}
+.kpi.primary{border-color:var(--gold-dim)}
+.kpi.primary::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)
+}
+.kpi-row{display:flex;justify-content:space-between;align-items:flex-end}
+.kpi-v{font-size:20px;font-weight:700;color:var(--gold);letter-spacing:-.5px;line-height:1}
+.kpi.primary .kpi-v{font-size:24px}
+.kpi-g .kpi-v{color:var(--green)}
+.kpi-l{font-size:9px;color:var(--muted);margin-top:3px}
+.kpi-tag{font-size:9px;padding:2px 6px;border-radius:4px;
+  background:rgba(31,199,106,.12);color:var(--green);font-weight:600;
+  white-space:nowrap;flex-shrink:0}
+
+/* Cutoff buttons */
+.cutoff-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.cutoff-btns{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.cb{
+  padding:4px 10px;border-radius:5px;font-size:10px;font-weight:600;
+  border:1px solid var(--border2);background:var(--s3);
+  color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;
+}
+.cb:hover{border-color:var(--gold);color:var(--text)}
+.cb.active{
+  background:linear-gradient(135deg,#c8923a,#e8b060);
+  color:#000;border-color:transparent;
+  box-shadow:0 1px 12px rgba(212,168,67,.3);
+}
+
+/* Export */
+.export-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.export-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:8px;border-radius:6px;font-size:11px;font-weight:600;
+  background:linear-gradient(135deg,#0d3320,#10402a);
+  color:var(--green);border:1px solid rgba(31,199,106,.25);
+  cursor:pointer;transition:all .15s;text-decoration:none;font-family:inherit;
+  margin-top:7px;
+}
+.export-btn:hover{background:linear-gradient(135deg,#10402a,#145234);
+  box-shadow:0 2px 12px rgba(31,199,106,.18);color:#fff}
+.export-btn.dim{opacity:.35;pointer-events:none}
+.export-info{font-size:9px;color:var(--muted);margin-top:5px;text-align:center}
+
+/* Controls */
+.ctrl-panel{
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px;
+  overflow:visible; /* allow slider thumbs to render fully at 100% zoom */
+}
+.ctrl-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;min-width:0}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-lbl{font-size:10px;color:var(--muted);width:58px;flex-shrink:0}
+input[type=range]{flex:1;min-width:0;width:0;height:2px;accent-color:var(--gold);cursor:pointer}
+.ctrl-val{font-size:10px;font-weight:600;color:var(--text);width:28px;flex-shrink:0;text-align:right}
+
+/* Grade legend */
+.legend-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.legend-bar{
+  height:10px;border-radius:3px;margin:6px 0 4px;
+  background:linear-gradient(to right,#1800ff,#0099ff,#00ff88,#ffee00,#ff7700,#ff0000)
+}
+.legend-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted2)}
+
+/* Elev chart */
+.elev-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px;flex-shrink:0}
+
+/* ── RIGHT PANEL: tabs ── */
+.right{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.tab-content{flex:1;overflow:hidden;position:relative}
+.tab-pane{position:absolute;inset:0;overflow:auto;display:none}
+.tab-pane.active{display:flex;flex-direction:column}
+
+/* ── TAB: 3D ── */
+.viewport{flex:1;position:relative;overflow:hidden}
+#canvas3d{width:100%;height:100%;display:block}
+
+.v-overlay{
+  position:absolute;top:14px;right:14px;
+  background:rgba(7,9,14,.88);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;font-size:10px;
+  color:var(--muted);line-height:1.9;backdrop-filter:blur(8px);
+}
+.v-overlay strong{color:var(--text);display:block;
+  font-size:11px;margin-bottom:4px;letter-spacing:.02em}
+
+.v-hover{
+  position:absolute;top:14px;left:14px;
+  background:rgba(7,9,14,.92);border:1px solid var(--gold-dim);
+  border-radius:10px;padding:11px 14px;font-size:10px;
+  display:none;min-width:130px;backdrop-filter:blur(8px);
+}
+.v-hover-grade{font-size:26px;font-weight:700;color:var(--gold);line-height:1;margin:3px 0}
+.v-hover-z{font-size:10px;color:var(--muted)}
+
+.v-loading{
+  position:absolute;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;z-index:10;
+}
+.v-spinner{
+  width:36px;height:36px;border:2px solid var(--border2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.v-loadtxt{font-size:12px;color:var(--muted)}
+
+.v-hint{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(7,9,14,.75);border:1px solid var(--border);
+  border-radius:6px;padding:5px 14px;font-size:9px;color:var(--muted2);
+  pointer-events:none;white-space:nowrap;backdrop-filter:blur(4px);
+}
+
+/* ── TAB: RESULTS ── */
+.results-pane{padding:20px;gap:14px}
+
+.r-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;flex-shrink:0}
+.r-kpi{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;padding:13px 16px;position:relative;overflow:hidden;
+}
+.r-kpi.primary{border-color:var(--gold-dim)}
+.r-kpi.primary::after{content:'';position:absolute;top:0;left:0;right:0;
+  height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.r-kpi-l{font-size:9px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.r-kpi-v{font-size:24px;font-weight:700;color:var(--gold);
+  letter-spacing:-.6px;line-height:1}
+.r-kpi.primary .r-kpi-v{font-size:28px}
+.r-kpi-g .r-kpi-v{color:var(--green)}
+.r-kpi-sub{font-size:9px;color:var(--muted);margin-top:4px}
+
+.r-charts{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;flex-shrink:0}
+.r-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:15px 16px}
+.r-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.r-card-title{font-size:9px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted)}
+.r-card-badge{font-size:9px;padding:2px 7px;border-radius:99px;
+  background:var(--gold-glow);color:var(--gold);
+  border:1px solid rgba(212,168,67,.2);font-weight:500}
+
+.sens-card{background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;flex-shrink:0}
+.sens-hdr{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border-bottom:1px solid var(--border)}
+.sens-tbl{width:100%;border-collapse:collapse}
+.sens-tbl th{padding:0 16px 9px;text-align:left;font-size:9px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+.sens-tbl td{padding:10px 16px;border-top:1px solid rgba(28,42,58,.7);font-size:11px}
+.sens-tbl tr{cursor:pointer;transition:background .1s}
+.sens-tbl tr:hover td{background:var(--s2)}
+.sens-tbl tr.cur td{background:rgba(212,168,67,.05)}
+.sens-tbl tr.cur td:first-child{border-left:2px solid var(--gold);padding-left:14px}
+
+.stopes-card{background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;flex-shrink:0}
+.stopes-hdr{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;border-bottom:1px solid var(--border)}
+.stopes-tbl{width:100%;border-collapse:collapse}
+.stopes-tbl th{padding:0 12px 9px;text-align:left;font-size:9px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
+.stopes-tbl td{padding:8px 12px;border-top:1px solid rgba(28,42,58,.7);font-size:11px}
+.stopes-tbl tr:hover td{background:var(--s2)}
+.gpill{display:inline-flex;align-items:center;padding:2px 8px;
+  border-radius:99px;font-size:9px;font-weight:700}
+.ghi{background:var(--gold-glow);color:var(--gold)}
+.gmd{background:rgba(31,199,106,.1);color:var(--green)}
+.glo{background:rgba(40,60,80,.2);color:var(--muted)}
+
+/* ── RUN PANEL ── */
+.run-panel{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.run-input-row{display:flex;gap:5px;margin-top:6px}
+.run-input{
+  flex:1;background:var(--s3);border:1px solid var(--border2);
+  border-radius:5px;padding:5px 8px;font-size:11px;font-weight:600;
+  color:var(--text);font-family:inherit;outline:none;min-width:0;
+}
+.run-input:focus{border-color:var(--gold)}
+.run-input::placeholder{color:var(--muted2)}
+.run-btn{
+  padding:5px 11px;border-radius:5px;font-size:10px;font-weight:700;
+  border:none;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;
+  background:linear-gradient(135deg,#c8923a,#e8b060);color:#000;
+}
+.run-btn:hover{box-shadow:0 2px 12px rgba(212,168,67,.35)}
+.run-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+
+/* progress bar */
+.run-progress{
+  margin-top:8px;display:none;
+  background:rgba(7,9,14,.9);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px 10px;
+  backdrop-filter:blur(4px);
+}
+.run-progress.visible{display:block}
+.run-progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.run-status-left{display:flex;align-items:center;gap:8px;min-width:0}
+.run-spinner{
+  width:14px;height:14px;flex-shrink:0;
+  border:2px solid var(--border2);
+  border-top-color:var(--gold);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+.run-progress.done .run-spinner,
+.run-progress.error .run-spinner{display:none}
+.run-stage{font-size:9px;font-weight:600;color:var(--text);letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.run-pct{font-size:9px;font-weight:700;color:var(--text)}
+.run-bar-track{height:5px;background:var(--s3);border-radius:99px;overflow:hidden;
+  border:1px solid var(--border)}
+.run-bar-fill{height:100%;border-radius:99px;width:0%;transition:width .4s ease;
+  background:linear-gradient(90deg,#c8923a,#f0d060)}
+.run-bar-fill.indeterminate{
+  width:40% !important;
+  animation:barslide 1.4s ease-in-out infinite;
+}
+@keyframes barslide{
+  0%{transform:translateX(-120%)}
+  100%{transform:translateX(310%)}
+}
+.run-bar-fill.done{background:linear-gradient(90deg,var(--green),#5af0a0);width:100% !important}
+.run-bar-fill.error{background:var(--red);width:100% !important}
+.run-hint{font-size:9px;color:var(--muted);margin-top:4px}
+
+.run-log{
+  margin-top:7px;background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:7px 8px;font-size:9px;font-family:monospace;
+  color:var(--muted);max-height:100px;overflow-y:auto;display:none;
+  line-height:1.6;
+}
+.run-log.visible{display:block}
+/* ── AI card ── */
+.ai-card{background:linear-gradient(135deg,rgba(31,199,106,.06),rgba(212,168,67,.06));
+  border:1px solid rgba(31,199,106,.2);border-radius:8px;padding:10px 12px}
+.ai-card-title{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--green);margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.ai-card-title::before{content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0}
+.ai-metric-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.ai-metric-label{font-size:9px;color:var(--muted)}
+.ai-metric-value{font-size:13px;font-weight:700;color:var(--green)}
+.ai-bar-wrap{margin-top:3px;height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.ai-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),#5af0a0);transition:width .6s ease}
+/* ── Upload ── */
+.upload-label-inner{display:block;padding:6px 10px;border-radius:5px;font-size:10px;font-weight:600;
+  border:1px dashed var(--border2);background:var(--s3);color:var(--muted);
+  cursor:pointer;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  transition:border-color .2s,color .2s}
+.upload-label-inner:hover{border-color:var(--gold);color:var(--gold)}
+/* ── Economics ── */
+.econ-pane{padding:24px;overflow-y:auto;height:100%;display:flex;flex-direction:column;gap:18px}
+.eblk{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.eblk-hdr{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:#7a9ab5;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:7px}
+.eblk-tag{margin-left:auto;font-size:8px;font-weight:600;padding:2px 9px;border-radius:99px;
+  background:var(--gold-glow);color:var(--gold);border:1px solid rgba(212,168,67,.25);
+  text-transform:none;letter-spacing:.03em}
+.eg4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.eg3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ekp{background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;position:relative;overflow:hidden}
+.ekp::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border2)}
+.ekp.gld::after{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.ekp.grn::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.ekp-l{font-size:8.5px;color:#7a9ab5;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.ekp-v{font-size:20px;font-weight:700;color:var(--gold);letter-spacing:-.5px;line-height:1}
+.ekp-v.g{color:var(--green)}.ekp-v.r{color:var(--red)}.ekp-v.w{color:#dde8f5}
+.ekp-s{font-size:9px;color:#5a7a90;margin-top:4px}
+.esldr-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.esldr-lbl{font-size:10px;font-weight:600;color:var(--text)}
+.esldr-val{font-size:16px;font-weight:700;color:var(--gold)}
+input.esldr{width:100%;accent-color:var(--gold);cursor:pointer;margin:4px 0}
+.esldr-tks{display:flex;justify-content:space-between;font-size:9px;color:var(--muted2);margin-top:2px}
+.esens{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.esens-c{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center}
+.esens-l{font-size:8px;color:#7a9ab5;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.esens-v{font-size:14px;font-weight:700;color:#dde8f5}
+.ezg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ez{background:var(--s2);border-radius:8px;padding:14px;border-left:3px solid var(--gold);
+  border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.ez:nth-child(2){border-left-color:var(--green)}.ez:nth-child(3){border-left-color:var(--blue)}
+.ez-nm{font-size:11px;font-weight:700;margin-bottom:8px}
+.ez-r{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);
+  padding:3px 0;border-bottom:1px solid var(--border2)}
+.ez-r:last-child{border-bottom:none}.ez-r b{color:var(--text);font-weight:600}
+.eptbl{width:100%;border-collapse:collapse;font-size:11px}
+.eptbl th{font-size:9px;font-weight:600;color:var(--muted);text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+.eptbl td{padding:8px 10px;border-bottom:1px solid var(--border2);vertical-align:middle}
+.eptbl tr:hover td{background:var(--s2)}
+.epr{font-weight:700;color:var(--gold);font-size:13px;text-align:center}
+.eploc{font-family:monospace;font-size:10px;color:var(--muted)}
+.epp.pos{color:var(--green);font-weight:600}.epp.neg{color:var(--red);font-weight:600}
+
+/* ── Risk badges ── */
+.risk-high{color:var(--red);font-weight:700;font-size:10px}
+.risk-med{color:var(--gold);font-weight:600;font-size:10px}
+.risk-low{color:var(--green);font-weight:600;font-size:10px}
+.risk-badge{display:inline-block;padding:1px 7px;border-radius:99px;font-size:9px;font-weight:700}
+.rb-high{background:rgba(232,64,64,.15);color:var(--red);border:1px solid rgba(232,64,64,.3)}
+.rb-med{background:rgba(212,168,67,.15);color:var(--gold);border:1px solid rgba(212,168,67,.3)}
+.rb-low{background:rgba(31,199,106,.12);color:var(--green);border:1px solid rgba(31,199,106,.25)}
+
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav">
+  <div style="display: flex; align-items: center;">
+    <div class="logo">
+      <span class="logo-au" style="letter-spacing: 1px;">AURUM</span>
+      <div class="logo-gem"></div>
+      <span style="letter-spacing: 1px;">OPT</span>
+    </div>
+    <div class="nav-sep" style="margin: 0 15px;"></div>
+    <div style="display: flex; flex-direction: column; justify-content: center; line-height: 1.1;">
+      <span style="font-size: 10px; font-weight: 600; color: var(--text); letter-spacing: 0.5px; text-transform: uppercase;">Stope Shape Optimizer</span>
+      <span style="font-size: 9px; color: var(--gold-dim); letter-spacing: 0.3px; font-style: italic;">Precision in every prism.</span>
+    </div>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('3d')">⬡ 3D Deposit</button>
+    <button class="nav-tab" onclick="showTab('results')">⬛ Results</button>
+    <button class="nav-tab" onclick="showTab('economic')">💰 Economics</button>
+  </div>
+  <div class="nav-right">
+    <span class="pill pill-g">Z-alignment PASS</span>
+    <span class="pill pill-a">Exact DP · Optimal</span>
+    <div class="nav-sep"></div>
+    <div class="live-dot" id="liveDot"></div>
+    <span class="nav-status loading" id="navSt">Loading…</span>
+  </div>
+</nav>
+
+<!-- ═══ BODY ═══ -->
+<div class="body">
+
+  <!-- ─── LEFT SIDEBAR ─── -->
+  <div class="sidebar">
+    <div class="sb-top">
+
+      <!-- ═══ SINGLE METRICS SECTION ═══ -->
+      <div>
+
+        <!-- Row 1: Total Gold — hero metric -->
+        <div class="kpi primary" style="margin-bottom:5px">
+          <div class="sb-label" style="margin-bottom:3px">Total gold captured</div>
+          <div class="kpi-v" id="s-gold" style="font-size:24px">—</div>
+          <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:3px" id="s-gold-g">—</div>
+          <div style="font-size:9px;color:var(--green);margin-top:3px;letter-spacing:.02em">
+            ✓ Non-overlapping &nbsp;·&nbsp; Z-compliant
+          </div>
+        </div>
+
+        <!-- Row 2: Total tonnes mined -->
+        <div class="kpi" style="margin-bottom:5px">
+          <div class="sb-label" style="margin-bottom:3px">Total tonnes mined</div>
+          <div class="kpi-v" id="m-total-t" style="font-size:18px">—</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;display:flex;gap:8px">
+            <span>Ore <span id="m-oret" style="color:var(--text);font-weight:600">—</span></span>
+            <span style="color:var(--border2)">·</span>
+            <span>Waste <span id="m-wastet" style="color:var(--text);font-weight:600">—</span></span>
+          </div>
+        </div>
+
+        <!-- Row 3: 2×2 operational grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
+          <div class="kpi kpi-g">
+            <div class="sb-label" style="margin-bottom:2px">Waste ratio</div>
+            <div class="kpi-v" id="s-waste">—</div>
+            <div class="kpi-tag" id="s-waste-tag" style="margin-top:3px;font-size:9px">—</div>
+          </div>
+          <div class="kpi">
+            <div class="sb-label" style="margin-bottom:2px">Stopes</div>
+            <div class="kpi-v" id="s-stopes">—</div>
+          </div>
+          <div class="kpi">
+            <div class="sb-label" style="margin-bottom:2px">Cutoff</div>
+            <div class="kpi-v" style="font-size:15px" id="m-cutoff">—</div>
+          </div>
+          <div class="kpi">
+            <div class="sb-label" style="margin-bottom:2px">Runtime</div>
+            <div class="kpi-v" id="s-rt">—</div>
+            <div style="font-size:9px;color:var(--green);margin-top:2px">Z-align PASS</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Upload Block Model -->
+      <div class="run-panel" style="border-color:var(--border2)">
+        <div class="sb-label">Block Model CSV</div>
+        <label class="upload-label-inner" id="csvLabel" for="csvFileInput">📂 Choose CSV…</label>
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="onCsvSelected(this)">
+        <div id="csvStatus" style="font-size:9px;color:var(--muted);margin-top:5px">Using default block model</div>
+      </div>
+
+      <!-- AI Mine Planning -->
+      <div class="ai-card">
+        <div class="ai-card-title">AI Mine Planning Layer</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:8px">
+          <div style="background:rgba(232,64,64,.08);border:1px solid rgba(232,64,64,.2);
+            border-radius:6px;padding:5px 4px;text-align:center;min-width:0;overflow:hidden">
+            <div style="font-size:7.5px;color:var(--muted);margin-bottom:2px;white-space:nowrap">HIGH RISK</div>
+            <div style="font-size:13px;font-weight:700;color:var(--red);overflow:hidden;text-overflow:ellipsis" id="ai-risk-high">—</div>
+          </div>
+          <div style="background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.2);
+            border-radius:6px;padding:5px 4px;text-align:center;min-width:0;overflow:hidden">
+            <div style="font-size:7.5px;color:var(--muted);margin-bottom:2px;white-space:nowrap">MEDIUM</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);overflow:hidden;text-overflow:ellipsis" id="ai-risk-med">—</div>
+          </div>
+          <div style="background:rgba(31,199,106,.08);border:1px solid rgba(31,199,106,.2);
+            border-radius:6px;padding:5px 4px;text-align:center;min-width:0;overflow:hidden">
+            <div style="font-size:7.5px;color:var(--muted);margin-bottom:2px;white-space:nowrap">LOW RISK</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green);overflow:hidden;text-overflow:ellipsis" id="ai-risk-low">—</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;padding-top:7px;border-top:1px solid var(--border);
+          display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;margin-bottom:2px">
+            <span style="color:#7a9ab5">Sequence</span>
+            <span id="ai-seq-status" style="color:var(--green);font-weight:600">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:9px;color:#7a9ab5">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0"></span>
+            High — infill drill first
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:#7a9ab5">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
+            Low — ready to develop
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Cutoff -->
+      <div class="cutoff-panel">
+        <div class="sb-label">Cutoff grade</div>
+        <div class="cutoff-btns" id="cutoffBtns">
+          <button class="cb" id="btn-8"  onclick="switchTo(8)">8 g/t</button>
+          <button class="cb" id="btn-10" onclick="switchTo(10)">10 g/t</button>
+          <button class="cb" id="btn-12" onclick="switchTo(12)">12 g/t</button>
+        </div>
+      </div>
+
+      <!-- Run new cutoff -->
+      <div class="run-panel">
+        <div class="sb-label">Run new cutoff</div>
+        <div class="run-input-row">
+          <input class="run-input" id="runCutoffInput" type="number"
+            min="1" max="50" step="0.5" placeholder="e.g. 9.5" />
+          <button class="run-btn" id="runBtn" onclick="runCutoff()">▶ Run</button>
+        </div>
+        <div class="run-progress" id="runProgress">
+          <div class="run-progress-header">
+            <div class="run-status-left">
+              <div class="run-spinner" id="runSpinner"></div>
+              <span class="run-stage" id="runStage">Initialising...</span>
+            </div>
+            <span class="run-pct" id="runPct">0%</span>
+          </div>
+          <div class="run-bar-track">
+            <div class="run-bar-fill indeterminate" id="runBarFill"></div>
+          </div>
+          <div class="run-hint" id="runHint">This takes ~20–40 s</div>
+        </div>
+        <div class="run-log" id="runLog"></div>
+      </div>
+
+      <!-- Export -->
+      <div class="export-panel">
+        <div class="sb-label">Submit DXF</div>
+        <a class="export-btn dim" id="exportBtn" href="#" download="stopes_optimised.dxf">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export stopes_optimised.dxf
+        </a>
+        <div class="export-info" id="exportInfo">Run optimizer to generate DXF</div>
+      </div>
+
+      <!-- 3D Controls -->
+      <div class="ctrl-panel" id="ctrlPanel3d">
+        <div class="sb-label">3D Controls</div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Opacity</span>
+          <input type="range" id="ctrlOpacity" min="10" max="100" value="80"
+            oninput="setOpacity(this.value)">
+          <span class="ctrl-val" id="ctrlOpacityVal">80%</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Point size</span>
+          <input type="range" id="ctrlSize" min="1" max="8" step=".5" value="2.5"
+            oninput="setSize(this.value)">
+          <span class="ctrl-val" id="ctrlSizeVal">2.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Auto-rotate</span>
+          <input type="range" id="ctrlRot" min="0" max="1" step="1" value="1"
+            oninput="setAutoRot(this.value)">
+          <span class="ctrl-val" id="ctrlRotVal">On</span>
+        </div>
+      </div>
+
+      <!-- Grade legend -->
+      <div class="legend-panel">
+        <div class="sb-label">Au Grade (g/t)</div>
+        <div class="legend-bar"></div>
+        <div class="legend-labels">
+          <span>0</span><span>5</span><span>10</span><span>15</span><span>20+</span>
+        </div>
+      </div>
+
+      <!-- Elevation chart -->
+      <div class="elev-panel">
+        <div class="sb-label">Gold by elevation (k oz)</div>
+        <div style="position:relative;height:160px;margin-top:8px">
+          <canvas id="elevChart"></canvas>
+        </div>
+      </div>
+
+    </div><!-- /sb-top -->
+  </div><!-- /sidebar -->
+
+  <!-- ─── RIGHT PANEL ─── -->
+  <div class="right">
+    <div class="tab-content">
+
+      <!-- TAB: 3D DEPOSIT -->
+      <div class="tab-pane active" id="pane-3d">
+        <div class="viewport">
+          <canvas id="canvas3d"></canvas>
+
+          <!-- Loading -->
+          <div class="v-loading" id="vLoading">
+            <div class="v-spinner"></div>
+            <span class="v-loadtxt" id="vLoadMsg">Loading block model…</span>
+          </div>
+
+
+          <!-- Hover info -->
+          <div class="v-hover" id="vHover">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:2px">AU GRADE</div>
+            <div class="v-hover-grade" id="vHoverGrade">—</div>
+            <div class="v-hover-z" id="vHoverZ"></div>
+          </div>
+
+          <div class="v-hint">
+            Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp;
+            Right-drag to pan &nbsp;·&nbsp; Hover for grade
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: RESULTS -->
+      <div class="tab-pane results-pane" id="pane-results">
+
+        <!-- KPIs -->
+        <div class="r-kpis">
+          <div class="r-kpi primary">
+            <div class="r-kpi-l">Total gold captured</div>
+            <div class="r-kpi-v" id="r-gold">—</div>
+            <div class="r-kpi-sub" id="r-gold-sub">Non-overlapping · Z-compliant</div>
+          </div>
+          <div class="r-kpi r-kpi-g">
+            <div class="r-kpi-l">Waste ratio</div>
+            <div class="r-kpi-v" id="r-waste">—</div>
+            <div class="r-kpi-sub" id="r-waste-sub">—</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Economic stopes</div>
+            <div class="r-kpi-v" id="r-stopes">—</div>
+            <div class="r-kpi-sub">Non-overlapping</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Mean grade</div>
+            <div class="r-kpi-v" id="r-grade">—</div>
+            <div class="r-kpi-sub" id="r-grade-sub">—</div>
+          </div>
+          <div class="r-kpi">
+            <div class="r-kpi-l">Runtime</div>
+            <div class="r-kpi-v" id="r-rt">—</div>
+            <div class="r-kpi-sub">Total pipeline</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="r-charts">
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Gold by elevation</span>
+              <span class="r-card-badge" id="r-elev-badge">—</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rElevChart"></canvas>
+            </div>
+          </div>
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Grade distribution</span>
+              <span class="r-card-badge">Top 20</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rGradeChart"></canvas>
+            </div>
+          </div>
+          <div class="r-card">
+            <div class="r-card-hdr">
+              <span class="r-card-title">Waste vs grade</span>
+              <span class="r-card-badge" id="r-waste-badge">—</span>
+            </div>
+            <div style="position:relative;height:200px">
+              <canvas id="rWasteChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensitivity table -->
+        <div class="sens-card">
+          <div class="sens-hdr">
+            <span class="r-card-title">Cutoff sensitivity — click to switch</span>
+            <span class="pill pill-a">All pre-computed</span>
+          </div>
+          <table class="sens-tbl">
+            <thead><tr>
+              <th>Cutoff</th><th>Gold oz</th><th>Waste %</th>
+              <th>Stopes</th><th>Mean grade</th><th>Ore tonnes</th>
+              <th>Runtime</th><th>Status</th>
+            </tr></thead>
+            <tbody id="sensBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Top stopes -->
+        <div class="stopes-card">
+          <div class="stopes-hdr">
+            <span class="r-card-title">Top stopes by gold</span>
+            <span class="pill pill-g" id="stopes-waste-pill">Top 10 stopes</span>
+          </div>
+          <table class="stopes-tbl">
+            <thead><tr>
+              <th>#</th><th>X</th><th>Y</th><th>Z</th>
+              <th>Grade</th><th>Gold oz</th><th>Ore t</th><th>Waste</th>
+            </tr></thead>
+            <tbody id="stopesBody"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /pane-results -->
+
+      <!-- TAB: ECONOMICS -->
+      <div class="tab-pane" id="pane-economic">
+        <div class="econ-pane">
+          <div class="eblk">
+            <div class="eblk-hdr">Mine Economic Summary<span class="eblk-tag" id="e-ctag">—</span></div>
+            <div class="eg4">
+              <div class="ekp gld" style="grid-column:1/3">
+                <div class="ekp-l">Total Net Profit</div>
+                <div class="ekp-v g" id="e-profit" style="font-size:26px">—</div>
+                <div class="ekp-s" id="e-profit-sub">Revenue − Mining − Milling</div>
+              </div>
+              <div class="ekp grn"><div class="ekp-l">Total Revenue</div><div class="ekp-v" id="e-revenue">—</div><div class="ekp-s">Au × price × recovery</div></div>
+              <div class="ekp"><div class="ekp-l">Total Cost</div><div class="ekp-v w" id="e-cost">—</div><div class="ekp-s">Mining + Milling</div></div>
+            </div>
+            <div class="eg3" style="margin-top:10px">
+              <div class="ekp"><div class="ekp-l">Avg Break-even Price</div><div class="ekp-v" id="e-breakeven" style="font-size:16px">—</div><div class="ekp-s">Min gold price to profit</div></div>
+              <div class="ekp grn"><div class="ekp-l">Profitable Stopes</div><div class="ekp-v g" id="e-profitable" style="font-size:16px">—</div><div class="ekp-s" id="e-profitable-sub">At current gold price</div></div>
+              <div class="ekp"><div class="ekp-l">Profit per Tonne</div><div class="ekp-v" id="e-ppt" style="font-size:16px">—</div><div class="ekp-s">Net USD / t mined</div></div>
+            </div>
+          </div>
+          <div class="eblk">
+            <div class="eblk-hdr">Gold Price Sensitivity<span class="eblk-tag">Live — no re-run needed</span></div>
+            <div class="esldr-hd">
+              <span class="esldr-lbl">Gold Price</span>
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:10px;color:#7a9ab5">$</span>
+                <input type="number" id="goldPriceInput" min="1500" max="5000" step="50" value="3000"
+                  style="width:68px;background:var(--s2);border:1px solid var(--border);border-radius:5px;
+                    padding:3px 7px;color:var(--gold);font-size:14px;font-weight:700;text-align:right;
+                    font-family:inherit;outline:none"
+                  oninput="onGoldPriceInput(this.value)">
+                <span style="font-size:10px;color:#7a9ab5">/oz</span>
+                <button onclick="setGoldBase()"
+                  style="font-size:9px;font-weight:600;padding:3px 8px;border-radius:5px;
+                    background:var(--s3);border:1px solid var(--border);color:#7a9ab5;
+                    cursor:pointer;white-space:nowrap;font-family:inherit;
+                    transition:all .15s"
+                  onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+                  onmouseout="this.style.borderColor='var(--border)';this.style.color='#7a9ab5'">
+                  Set as base
+                </button>
+              </div>
+            </div>
+            <div style="font-size:9px;color:#7a9ab5;margin-bottom:6px">
+              Base: <span id="basePriceLabel" style="color:var(--gold);font-weight:600">$3,000 /oz</span>
+              <span style="color:#5a7a90;margin-left:4px">— change vs this price shown below</span>
+            </div>
+            <input type="range" class="esldr" id="goldPriceSlider" min="1500" max="5000" step="50" value="3000" oninput="onGoldPriceChange(this.value)">
+            <div class="esldr-tks"><span>$1,500</span><span>$2,500</span><span>$3,500</span><span>$5,000</span></div>
+            <div class="esens">
+              <div class="esens-c"><div class="esens-l">Net profit</div><div class="esens-v" id="e-sens-profit">—</div></div>
+              <div class="esens-c"><div class="esens-l" id="e-delta-lbl">vs base</div><div class="esens-v" id="e-sens-delta">—</div></div>
+              <div class="esens-c"><div class="esens-l">Margin vs break-even</div><div class="esens-v" id="e-sens-margin">—</div></div>
+            </div>
+          </div>
+          <div class="eblk" id="zoneBlock" style="display:none">
+            <div class="eblk-hdr">AI-Identified High-Grade Zones<span class="eblk-tag">K-means · top 20% stopes</span></div>
+            <div class="ezg" id="zoneGrid"></div>
+          </div>
+          <!-- Dilution Risk Summary -->
+          <div class="eblk" id="riskBlock" style="display:none">
+            <div class="eblk-hdr">AI Dilution Risk Analysis<span class="eblk-tag">Spatial XGBoost · boundary detection</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+              <div class="ekp" style="border-color:rgba(31,199,106,.25);text-align:center">
+                <div class="ekp-l">Low Risk</div>
+                <div class="ekp-v g" id="risk-low-count" style="font-size:24px">—</div>
+                <div class="ekp-s">Ready to develop</div>
+              </div>
+              <div class="ekp" style="border-color:rgba(212,168,67,.25);text-align:center">
+                <div class="ekp-l">Medium Risk</div>
+                <div class="ekp-v" id="risk-med-count" style="font-size:24px">—</div>
+                <div class="ekp-s">Monitor dilution</div>
+              </div>
+              <div class="ekp" style="border-color:rgba(232,64,64,.25);text-align:center">
+                <div class="ekp-l">High Risk</div>
+                <div class="ekp-v r" id="risk-high-count" style="font-size:24px">—</div>
+                <div class="ekp-s">Infill drill first</div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);padding:10px;background:var(--s2);border-radius:6px;line-height:1.7">
+              <span style="color:#7a9ab5">XGBoost spatial model — stopes where position predicts higher dilution than observed are flagged <span class="rb-high">HIGH</span>. Prioritise these for infill drilling before committing development capital.</span>
+            </div>
+          </div>
+
+          <!-- Mine Sequence Plan -->
+          <div class="eblk" id="sequenceBlock" style="display:none">
+            <div class="eblk-hdr">AI Mine Sequence Plan<span class="eblk-tag">Value · depth · risk · grade</span></div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+              Develop in this order to maximise early cash flow. Sequence weights: <b style="color:var(--text)">40% value density</b> · <b style="color:var(--text)">30% depth access</b> · <b style="color:var(--text)">20% dilution risk</b> · <b style="color:var(--text)">10% grade</b>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="eptbl">
+                <thead><tr>
+                  <th style="text-align:center">Seq</th>
+                  <th>Location (X · Y · Z)</th>
+                  <th>Grade</th>
+                  <th>Gold oz</th>
+                  <th>Value/t</th>
+                  <th>Waste %</th>
+                  <th>Dilution Risk</th>
+                </tr></thead>
+                <tbody id="sequenceBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /pane-economic -->
+
+    </div><!-- /tab-content -->
+  </div><!-- /right -->
+</div><!-- /body -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   GRADE COLOUR + CACHE HELPER
+════════════════════════════════════════════════════════════════════ */
+// Single cache-buster so all fetches share the same version token
+const CACHE_TAG = Date.now().toString();
+function nocache(url){
+  return url + (url.includes('?') ? '&' : '?') + 'v=' + CACHE_TAG;
+}
+function gradeRGB(au) {
+  const t = Math.min(au / 20, 1);
+  const stops = [
+    [0,   [24,  0,   255]],
+    [0.2, [0,   153, 255]],
+    [0.4, [0,   255, 136]],
+    [0.6, [255, 238, 0  ]],
+    [0.8, [255, 119, 0  ]],
+    [1.0, [255, 0,   0  ]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0,c0] = stops[i], [t1,c1] = stops[i+1];
+    if (t >= t0 && t <= t1) {
+      const f = (t-t0)/(t1-t0);
+      return [
+        (c0[0]+(c1[0]-c0[0])*f)/255,
+        (c0[1]+(c1[1]-c0[1])*f)/255,
+        (c0[2]+(c1[2]-c0[2])*f)/255,
+      ];
+    }
+  }
+  return [1,0,0];
+}
+function gradeCss(au) {
+  const [r,g,b] = gradeRGB(au);
+  return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   THREE.JS
+════════════════════════════════════════════════════════════════════ */
+const canvas3d  = document.getElementById('canvas3d');
+const renderer  = new THREE.WebGLRenderer({canvas:canvas3d, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x07090e, 1);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.001, 200);
+camera.position.set(2.4, 0.9, 2.4);
+camera.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff, .8));
+const dl = new THREE.DirectionalLight(0xffffff, .4);
+dl.position.set(5,5,5); scene.add(dl);
+const ax = new THREE.AxesHelper(.6);
+ax.material.opacity = .15; ax.material.transparent = true; scene.add(ax);
+
+// Orbit
+let drag=false, rclick=false, ox=0, oy=0;
+let theta=.8, phi=.55, radius=3.2, panX=0, panY=0;
+let autoRot = true;
+function updCam() {
+  camera.position.set(
+    radius*Math.sin(phi)*Math.cos(theta)+panX,
+    radius*Math.cos(phi)+panY,
+    radius*Math.sin(phi)*Math.sin(theta)
+  );
+  camera.lookAt(panX,panY,0);
+}
+updCam();
+canvas3d.addEventListener('mousedown', e => {
+  drag=true; rclick=e.button===2; ox=e.clientX; oy=e.clientY;
+});
+canvas3d.addEventListener('contextmenu', e=>e.preventDefault());
+window.addEventListener('mouseup', ()=>drag=false);
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const dx=(e.clientX-ox)*.005, dy=(e.clientY-oy)*.005;
+  if (rclick){panX-=dx*.4;panY+=dy*.4;}
+  else{theta-=dx; phi=Math.max(.05,Math.min(Math.PI-.05,phi+dy));}
+  ox=e.clientX; oy=e.clientY; updCam();
+});
+canvas3d.addEventListener('wheel', e=>{
+  radius=Math.max(.3,Math.min(10,radius+e.deltaY*.004));
+  updCam(); e.preventDefault();
+},{passive:false});
+
+// Resize
+function resizeRenderer(){
+  const w=canvas3d.clientWidth, h=canvas3d.clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resizeRenderer).observe(canvas3d); resizeRenderer();
+
+// Raycaster
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = .024;
+const mouse = new THREE.Vector2(-9999,-9999);
+canvas3d.addEventListener('mousemove', e=>{
+  const r=canvas3d.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)/r.width*2-1;
+  mouse.y=-(e.clientY-r.top)/r.height*2+1;
+});
+
+// Point cloud
+let pm=null, POINTS=[], fullAU=null, curMin=0;
+
+function initCloud() {
+  if (pm){scene.remove(pm);pm.geometry.dispose();pm.material.dispose();}
+  const n=POINTS.length;
+  const pos=new Float32Array(n*3), col=new Float32Array(n*3);
+  fullAU=new Float32Array(n);
+  POINTS.forEach((p,i)=>{
+    pos[i*3]=p.nx; pos[i*3+1]=p.ny; pos[i*3+2]=p.nz;
+    fullAU[i]=p.AU;
+    const[r,g,b]=gradeRGB(p.AU);
+    col[i*3]=r; col[i*3+1]=g; col[i*3+2]=b;
+  });
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',   new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({
+    size: +document.getElementById('ctrlSize').value*.01,
+    vertexColors:true, transparent:true,
+    opacity: +document.getElementById('ctrlOpacity').value/100,
+    sizeAttenuation:true,
+  });
+  pm=new THREE.Points(geo,mat); scene.add(pm);
+}
+
+function applyFilter(minG) {
+  curMin=minG;
+  if (!pm||!fullAU) return;
+  const arr=pm.geometry.getAttribute('color').array;
+  for (let i=0;i<fullAU.length;i++) {
+    if (fullAU[i]>=minG){
+      const[r,g,b]=gradeRGB(fullAU[i]);
+      arr[i*3]=r; arr[i*3+1]=g; arr[i*3+2]=b;
+    } else { arr[i*3]=0; arr[i*3+1]=0; arr[i*3+2]=0; }
+  }
+  pm.geometry.getAttribute('color').needsUpdate=true;
+}
+
+// Render loop
+let frame=0;
+(function loop(){
+  requestAnimationFrame(loop); frame++;
+  if (autoRot&&frame%2===0){theta+=.003;updCam();}
+  if (frame%6===0&&pm){
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObject(pm);
+    const hv=document.getElementById('vHover');
+    const hit=hits.find(h=>POINTS[h.index]&&POINTS[h.index].AU>=curMin);
+    if (hit){
+      const p=POINTS[hit.index];
+      tt('vHoverGrade',p.AU.toFixed(2)+' g/t');
+      if (p.origZ) tt('vHoverZ','Z: '+p.origZ+'m');
+      hv.style.display='block';
+    } else hv.style.display='none';
+  }
+  renderer.render(scene,camera);
+})();
+
+// 3D controls
+function setOpacity(v){
+  tt('ctrlOpacityVal',v+'%');
+  if(pm) pm.material.opacity=v/100;
+}
+function setSize(v){
+  tt('ctrlSizeVal',v);
+  if(pm) pm.material.size=v*.01;
+}
+function setAutoRot(v){
+  autoRot=!!+v;
+  tt('ctrlRotVal',autoRot?'On':'Off');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DATA & STATE
+════════════════════════════════════════════════════════════════════ */
+const KNOWN=[8,10,12], CUTOFFS=[...KNOWN];
+const cache={};
+let active=null;
+let rElevC, rGradeC, rWasteC;
+
+function cutoffStr(c){return String(parseFloat(c));}
+function jsonFile(c){return `results_${cutoffStr(c)}gt.json`;}
+function btnId(c){return `btn-${String(c).replace('.','_')}`;}
+function rowId(c){return `row-${String(c).replace('.','_')}`;}
+
+function tt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function setNav(msg,cls){
+  tt('navSt',msg);
+  document.getElementById('navSt').className='nav-status '+cls;
+  const d=document.getElementById('liveDot');
+  d.style.background=cls==='ok'?'var(--green)':cls==='err'?'var(--red)':'var(--gold)';
+  d.style.boxShadow='0 0 8px '+d.style.background;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════════════════════ */
+window.addEventListener('load',async()=>{
+  buildSensTable(KNOWN);
+  // Load 3D points
+  try{
+    tt('vLoadMsg','Loading points3d.json…');
+    const r=await fetch(nocache('points3d.json'));
+    if(!r.ok) throw new Error();
+    POINTS=await r.json();
+    initCloud(); applyFilter(0);
+    document.getElementById('vLoading').style.display='none';
+  } catch {
+    tt('vLoadMsg','Generating deposit preview…');
+    buildFallbackCloud();
+    document.getElementById('vLoading').style.display='none';
+  }
+  // Load results
+  try{
+    const r=await fetch(nocache('results.json'));
+    if(!r.ok) throw new Error();
+    const d=await r.json();
+    cache[d.cutoff]=d;
+    if(!CUTOFFS.includes(d.cutoff)){CUTOFFS.push(d.cutoff);addBtn(d.cutoff);addSensRow(d.cutoff);}
+    setSensRow(d.cutoff,d);
+    switchTo(d.cutoff);
+    renderExtras(d.cutoff);
+    setNav(`${d.cutoff} g/t · ${d.stope_count.toLocaleString()} stopes · PASS`,'ok');
+  } catch {
+    setNav('No results.json — run optimizer first','err');
+  }
+  // Pre-load a few known hackathon cutoffs
+  KNOWN.forEach(c=>loadJSON(c,false));
+
+  // Dynamically discover any other cutoffs the optimiser has produced
+  // via results_index.json (maintained by the backend).
+  try{
+    const idx=await fetch(nocache('results_index.json'));
+    if(idx.ok){
+      const data=await idx.json();
+      if(Array.isArray(data.cutoffs)){
+        data.cutoffs.forEach(c=>{
+          if(!CUTOFFS.includes(c)){
+            CUTOFFS.push(c);
+            addBtn(c);
+            addSensRow(c);
+          }
+          loadJSON(c,false);
+        });
+      }
+    }
+  }catch(e){
+    console.warn('results_index.json not found or invalid',e);
+  }
+});
+
+function buildFallbackCloud(){
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  POINTS=Array.from({length:6000},()=>{
+    const z=rnd(-.5,.5), r=.7*(1-Math.abs(z)*.5)*rnd(.3,1), a=rnd(0,Math.PI*2);
+    return{nx:r*Math.cos(a)*rnd(.6,1),ny:z,nz:r*Math.sin(a)*.7,AU:rnd(0,22),origZ:null};
+  });
+  initCloud(); applyFilter(0);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   LOAD JSON
+════════════════════════════════════════════════════════════════════ */
+function loadJSON(c,show){
+  if(cache[c]){if(show)switchTo(c);return;}
+  fetch(nocache(jsonFile(c)))
+    .then(r=>{if(!r.ok)throw new Error();return r.json();})
+    .then(d=>{
+      cache[c]=d;
+      if(!CUTOFFS.includes(c)){CUTOFFS.push(c);addBtn(c);addSensRow(c);}
+      setSensRow(c,d);
+      if(show){switchTo(c); renderExtras(c);}
+    })
+    .catch(()=>{setSensRow(c,null);if(show)setNav(`${jsonFile(c)} not found`,'err');});
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SWITCH CUTOFF
+════════════════════════════════════════════════════════════════════ */
+function switchTo(c){
+  active=c;
+  document.querySelectorAll('.cb').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById(btnId(c));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.sens-tbl tbody tr').forEach(r=>r.classList.remove('cur'));
+  const row=document.getElementById(rowId(c));
+  if(row) row.classList.add('cur');
+  if(cache[c]){ render(c); renderExtras(c); }
+  else{setNav(`Loading ${jsonFile(c)}…`,'loading');loadJSON(c,true);}
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════════════════════════ */
+function render(c){
+  const d=cache[c]; if(!d)return;
+  const cs=cutoffStr(c);
+
+  setNav(`${c} g/t · ${d.stope_count.toLocaleString()} stopes · Z-alignment PASS`,'ok');
+
+  // Update 3D filter
+  applyFilter(c);
+
+  // Export button
+  const eb=document.getElementById('exportBtn');
+  eb.href=`outputs/stopes_optimised.dxf`;
+  eb.download=`stopes_optimised_${cs}gt.dxf`;
+  eb.classList.remove('dim');
+  tt('exportInfo',`stopes_optimised.dxf · ${cs} g/t`);
+
+  // Sidebar KPIs
+  tt('s-gold',   (d.gold_oz/1e6).toFixed(3)+'M oz');
+  tt('s-gold-g',  (d.gold_grams/1e6).toFixed(2)+'M g');
+  const _sub = document.getElementById('s-gold-sub'); if(_sub) _sub.textContent = '';
+  tt('s-waste',  d.waste_pct+'%');
+  tt('s-waste-tag',d.waste_tonnes.toLocaleString()+' t');
+  tt('s-stopes', d.stope_count.toLocaleString());
+  tt('s-grade',  d.mean_grade+' g/t');
+  tt('s-rt',     d.total_time_s+'s');
+  tt('s-scan',   d.scan_time_s+'s');
+
+  // Results tab KPIs
+  tt('r-gold',   (d.gold_oz/1e6).toFixed(3)+'M oz');
+  tt('r-gold-sub',(d.gold_grams/1e6).toFixed(1)+'M g · non-overlapping');
+  tt('r-waste',  d.waste_pct+'%');
+  tt('r-waste-sub',d.waste_tonnes.toLocaleString()+' t waste');
+  tt('r-stopes', d.stope_count.toLocaleString());
+  tt('r-grade',  d.mean_grade+' g/t');
+  tt('r-grade-sub','Max '+d.max_grade+' g/t');
+  tt('r-rt',     d.total_time_s+'s');
+
+  // Chart badges
+  tt('r-elev-badge', d.z_elevations.length+' levels');
+  tt('r-waste-badge', d.waste_pct+'% waste');
+
+  // Elevation chart sidebar
+  buildElevChart('elevChart', d, true);
+  // Results tab charts
+  buildElevChart('rElevChart', d, false);
+  buildGradeChart(d);
+  buildWasteChart(d);
+  buildTable(d);
+  buildMeta(d,c);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CHARTS
+════════════════════════════════════════════════════════════════════ */
+const COPTS={responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false}},animation:{duration:250}};
+
+let elevSideChart=null;
+function buildElevChart(canvasId,d,isSidebar){
+  const elev=d.by_elevation;
+  const inst=isSidebar?'elevSideChart':'rElevC';
+  if(window[inst]) window[inst].destroy();
+  window[inst]=new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{
+      labels:elev.map(e=>e.z+'m'),
+      datasets:[{
+        data:elev.map(e=>Math.round(e.gold_oz)),
+        backgroundColor:elev.map(e=>
+          e.avg_grade>=13?'#d4a843':e.avg_grade>=10?'#1fc76a':'#3d9be0'),
+        borderRadius:2,borderSkipped:false,barPercentage:.85,
+      }]
+    },
+    options:{...COPTS,scales:{
+      x:{ticks:{color:'#7a9ab5',font:{size:7},maxRotation:45,autoSkip:false},grid:{display:false}},
+      y:{ticks:{color:'#7a9ab5',font:{size:8},callback:v=>(v/1000).toFixed(0)+'k'},
+         grid:{color:'#111720'}},
+    }}
+  });
+}
+
+function buildGradeChart(d){
+  const b={};
+  d.top20_stopes.forEach(s=>{const k=Math.floor(s.WAVG_GRADE);b[k]=(b[k]||0)+1;});
+  const keys=Object.keys(b).sort((a,z)=>+a-+z);
+  if(rGradeC) rGradeC.destroy();
+  rGradeC=new Chart(document.getElementById('rGradeChart'),{
+    type:'bar',
+    data:{
+      labels:keys.map(k=>k+'–'+(+k+1)),
+      datasets:[{
+        data:keys.map(k=>b[k]),
+        backgroundColor:keys.map(k=>+k>=16?'#d4a843':+k>=12?'#1fc76a':'#3d9be0'),
+        borderRadius:3,borderSkipped:false,
+      }]
+    },
+    options:{...COPTS,scales:{
+      x:{ticks:{color:'#7a9ab5',font:{size:9}},grid:{display:false}},
+      y:{ticks:{color:'#7a9ab5',font:{size:9}},grid:{color:'#111720'}},
+    }}
+  });
+}
+
+function buildWasteChart(d){
+  const pts=d.top20_stopes.map(s=>({
+    x:s.WAVG_GRADE,
+    y:s.WASTE_RATIO?+(s.WASTE_RATIO*100).toFixed(1):0,
+  }));
+  if(rWasteC) rWasteC.destroy();
+  rWasteC=new Chart(document.getElementById('rWasteChart'),{
+    type:'scatter',
+    data:{datasets:[{
+      data:pts,
+      backgroundColor:pts.map(p=>p.y===0?'rgba(31,199,106,.75)':'rgba(212,168,67,.7)'),
+      pointRadius:5,pointHoverRadius:7,
+    }]},
+    options:{...COPTS,scales:{
+      x:{title:{display:true,text:'Grade (g/t)',color:'#7a9ab5',font:{size:9}},
+         ticks:{color:'#7a9ab5',font:{size:9}},grid:{color:'#111720'}},
+      y:{title:{display:true,text:'Waste %',color:'#7a9ab5',font:{size:9}},
+         ticks:{color:'#7a9ab5',font:{size:9}},grid:{color:'#111720'}},
+    },
+    plugins:{...COPTS.plugins,tooltip:{callbacks:{
+      label:ctx=>`Grade: ${ctx.raw.x.toFixed(2)} g/t · Waste: ${ctx.raw.y}%`
+    }}}}
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   STOPES TABLE + META
+════════════════════════════════════════════════════════════════════ */
+function buildTable(d){
+  const rows = d.top20_stopes.slice(0,10);
+  // Compute avg waste for pill label
+  const avgWaste = rows.length > 0
+    ? rows.reduce((s,r)=>s+(r.WASTE_RATIO||0),0)/rows.length*100 : 0;
+  const pill = document.getElementById('stopes-waste-pill');
+  if (pill) pill.textContent = 'Avg dilution ' + avgWaste.toFixed(0) + '%';
+
+  document.getElementById('stopesBody').innerHTML = rows.map((s,i)=>{
+    const wr   = s.WASTE_RATIO != null ? (s.WASTE_RATIO*100) : 0;
+    const wrS  = wr.toFixed(1);
+    // Colour: green <15%, gold 15-25%, red >25% — industry thresholds
+    const wCol = wr < 15 ? 'var(--green)' : wr < 25 ? 'var(--gold)' : 'var(--red)';
+    const wFw  = wr < 15 ? '700' : '400';
+    const cls  = s.WAVG_GRADE >= 16 ? 'ghi' : s.WAVG_GRADE >= 12 ? 'gmd' : 'glo';
+    return `<tr>
+      <td style="color:var(--muted2);font-weight:600">${i+1}</td>
+      <td style="color:var(--muted);font-size:10px">${s.X_ORIGIN}</td>
+      <td style="color:var(--muted);font-size:10px">${s.Y_ORIGIN}</td>
+      <td style="color:var(--muted);font-size:10px">${s.Z_ORIGIN}</td>
+      <td><span class="gpill ${cls}">${s.WAVG_GRADE.toFixed(2)} g/t</span></td>
+      <td style="font-weight:700;color:var(--gold)">${Math.round(s.GOLD_OZ).toLocaleString()}</td>
+      <td style="color:var(--muted);font-size:10px">${Math.round(s.ORE_TONNES).toLocaleString()}</td>
+      <td style="color:${wCol};font-weight:${wFw}">${wrS}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function buildMeta(d,c){}  // meta now in KPI cards
+
+/* ════════════════════════════════════════════════════════════════════
+   SENSITIVITY TABLE
+════════════════════════════════════════════════════════════════════ */
+function buildSensTable(cutoffs){
+  document.getElementById('sensBody').innerHTML=cutoffs.map(c=>sensRow(c)).join('');
+}
+function sensRow(c){
+  const cs=cutoffStr(c);
+  return`<tr id="${rowId(c)}" data-c="${c}"
+            class="${c===active?'cur':''}"
+            onclick="switchTo(${c})">
+    <td style="font-weight:700;color:var(--gold)">${c} g/t</td>
+    <td id="s2-gold-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-waste-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-stopes-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-grade-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-ore-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-time-${cs}" style="color:var(--muted)">—</td>
+    <td id="s2-stat-${cs}">
+      <span style="font-size:9px;color:var(--muted2)">loading…</span>
+    </td>
+  </tr>`;
+}
+function addSensRow(c){
+  document.getElementById('sensBody').insertAdjacentHTML('beforeend',sensRow(c));
+}
+function setSensRow(c,d){
+  const cs=cutoffStr(c);
+  if(!document.getElementById(`s2-gold-${cs}`)) return;
+  if(d){
+    tt(`s2-gold-${cs}`,  (d.gold_oz/1e6).toFixed(3)+'M oz');
+    tt(`s2-waste-${cs}`, d.waste_pct+'%');
+    tt(`s2-stopes-${cs}`,d.stope_count.toLocaleString());
+    tt(`s2-grade-${cs}`, d.mean_grade+' g/t');
+    tt(`s2-ore-${cs}`,   d.ore_tonnes?(d.ore_tonnes/1e6).toFixed(1)+'M t':'—');
+    tt(`s2-time-${cs}`,  d.total_time_s+'s');
+    document.getElementById(`s2-stat-${cs}`).innerHTML=
+      `<span style="font-size:9px;color:var(--green);font-weight:700">✓ Ready</span>`;
+  } else {
+    document.getElementById(`s2-stat-${cs}`).innerHTML=
+      `<span style="font-size:9px;color:var(--muted2)">Run optimizer</span>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DYNAMIC BUTTONS
+════════════════════════════════════════════════════════════════════ */
+function addBtn(c){
+  if(document.getElementById(btnId(c))) return;
+  const b=document.createElement('button');
+  b.className='cb'; b.id=btnId(c);
+  b.textContent=c+' g/t';
+  b.onclick=()=>switchTo(c);
+  document.getElementById('cutoffBtns').appendChild(b);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════════════════════════════ */
+function showTab(name){
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>
+    t.classList.toggle('active',['3d','results'][i]===name));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`pane-${name}`).classList.add('active');
+  // Show 3D controls only on 3D tab
+  document.getElementById('ctrlPanel3d').style.display =
+    name === '3d' ? 'block' : 'none';
+  // Resize renderer when switching to 3D
+  if(name==='3d') setTimeout(resizeRenderer,10);
+}
+
+// Set initial state on load
+document.getElementById('ctrlPanel3d').style.display = 'block';
+
+/* ════════════════════════════════════════════════════════════════════
+   RUN NEW CUTOFF  — progress bar edition
+════════════════════════════════════════════════════════════════════ */
+let _runPollTimer = null;
+let _lastLogLen   = 0;
+
+// Pipeline stage keywords → [label, approx % complete]
+const STAGE_MAP = [
+  [/data_loader/,         ['Loading CSV data',        8]],
+  [/preprocessing/,       ['Preprocessing blocks',   16]],
+  [/prefix_sum/,          ['Building 3D grids',       24]],
+  [/stope_engine/,        ['Scanning stope positions',34]],
+  [/z_alignment/,         ['Z-level alignment',       42]],
+  [/economic_filter/,     ['Applying grade cutoff',   50]],
+  [/ai_training/,         ['Training AI model',       60]],
+  [/ai_prediction/,       ['AI prediction pass',      68]],
+  [/ranking_module/,      ['Ranking stopes',          74]],
+  [/optimised_greedy/,    ['Running exact DP',        82]],
+  [/iterative/,           ['Hill-climbing polish',    90]],
+  [/dxf_export/,          ['Exporting DXF',           94]],
+  [/dashboard/,           ['Writing results JSON',    97]],
+];
+
+function _stageFromLine(line) {
+  for (const [re, info] of STAGE_MAP) {
+    if (re.test(line)) return info;
+  }
+  return null;
+}
+
+function _setProgress(pct, stage, hint) {
+  const fill = document.getElementById('runBarFill');
+  const stageEl = document.getElementById('runStage');
+  const pctEl   = document.getElementById('runPct');
+  const hintEl  = document.getElementById('runHint');
+
+  fill.classList.remove('indeterminate', 'done', 'error');
+  fill.style.width = pct + '%';
+  stageEl.textContent = stage || '';
+  pctEl.textContent   = pct + '%';
+  if (hint !== undefined) hintEl.textContent = hint;
+}
+
+function _setRunUI(state) {
+  const prog = document.getElementById('runProgress');
+  const fill = document.getElementById('runBarFill');
+  const btn  = document.getElementById('runBtn');
+  const spin = document.getElementById('runSpinner');
+
+  prog.className = 'run-progress visible';
+  btn.disabled = (state === 'running');
+  if (spin) spin.style.display = 'block';
+
+  if (state === 'running') {
+    fill.classList.add('indeterminate');
+    fill.classList.remove('done','error');
+    document.getElementById('runStage').textContent = 'Starting...';
+    document.getElementById('runPct').textContent   = '';
+    document.getElementById('runHint').textContent  = 'This takes ~20-40 s';
+  } else if (state === 'done') {
+    fill.classList.remove('indeterminate','error');
+    fill.classList.add('done');
+    prog.classList.add('done');
+    if (spin) spin.style.display = 'none';
+    document.getElementById('runStage').textContent = 'Complete!';
+    document.getElementById('runPct').textContent   = '100%';
+    document.getElementById('runHint').textContent  = 'Results loaded in dashboard';
+  } else if (state === 'error') {
+    fill.classList.remove('indeterminate','done');
+    fill.classList.add('error');
+    prog.classList.add('error');
+    if (spin) spin.style.display = 'none';
+    document.getElementById('runStage').textContent = 'Run failed';
+    document.getElementById('runPct').textContent   = '';
+    document.getElementById('runHint').textContent  = 'See log below for details';
+  } else {
+    // idle — hide bar
+    prog.classList.remove('visible');
+    fill.style.width = '0%';
+  }
+}
+
+function _appendLog(lines) {
+  const box = document.getElementById('runLog');
+  const filtered = lines.filter(l => {
+    if (!l) return false;
+    if (/^\s{2,}/.test(l)) return false;
+    if (/^=+/.test(l)) return false;
+    if (/TOP 10 STOPES BY RANK/i.test(l)) return false;
+    return true;
+  });
+  if (!filtered.length) return;
+  box.classList.add('visible');
+  filtered.forEach(l => {
+    const d = document.createElement('div');
+    d.textContent = l;
+    box.appendChild(d);
+    // Advance progress bar based on recognised stages
+    const s = _stageFromLine(l);
+    if (s) _setProgress(s[1], s[0]);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function _pollStatus() {
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(data => {
+      const output = Array.isArray(data.output) ? data.output : [];
+      const newLines = output.slice(_lastLogLen);
+      if (newLines.length) { _appendLog(newLines); _lastLogLen = output.length; }
+
+      if (data.status === 'running') {
+        _runPollTimer = setTimeout(_pollStatus, 800);
+      } else if (data.status === 'done') {
+        clearTimeout(_runPollTimer);
+        setTimeout(() => {
+          const c = parseFloat(data.cutoff);
+          if (!Number.isFinite(c)) { _setRunUI('error'); return; }
+
+          // Direct fetch — bypass all caching
+          const url = 'results_' + String(c).replace(/\.?0+$/, '') + 'gt.json?_=' + Date.now();
+          fetch(url)
+            .then(r => { if(!r.ok) throw new Error(r.status); return r.json(); })
+            .then(d => {
+              cache[c] = d;
+              if (!CUTOFFS.includes(c)) { CUTOFFS.push(c); addBtn(c); addSensRow(c); }
+              setSensRow(c, d);
+              switchTo(c);
+              renderExtras(c);
+              setNav(c + ' g/t · ' + d.stope_count.toLocaleString() + ' stopes · Z-alignment PASS', 'ok');
+              document.getElementById('runLog').innerHTML = '';
+              document.getElementById('runLog').classList.remove('visible');
+              _setRunUI('done');
+            })
+            .catch(err => {
+              // Fallback: try results.json directly
+              fetch('results.json?_=' + Date.now())
+                .then(r => r.json())
+                .then(d => {
+                  cache[d.cutoff] = d;
+                  if (!CUTOFFS.includes(d.cutoff)) { CUTOFFS.push(d.cutoff); addBtn(d.cutoff); addSensRow(d.cutoff); }
+                  setSensRow(d.cutoff, d);
+                  switchTo(d.cutoff);
+                  renderExtras(d.cutoff);
+                  setNav(d.cutoff + ' g/t · ' + d.stope_count.toLocaleString() + ' stopes · PASS', 'ok');
+                  _setRunUI('done');
+                })
+                .catch(() => {
+                  setNav('Done — click the cutoff button to load results', 'ok');
+                  _setRunUI('done');
+                });
+            });
+        }, 500);
+      } else if (data.status === 'error') {
+        _setRunUI('error');
+        clearTimeout(_runPollTimer);
+      }
+    })
+    .catch(() => { _runPollTimer = setTimeout(_pollStatus, 1500); });
+}
+
+function runCutoff() {
+  const val    = document.getElementById('runCutoffInput').value.trim();
+  const cutoff = parseFloat(val);
+  if (!val || isNaN(cutoff) || cutoff <= 0) {
+    _setRunUI('error');
+    document.getElementById('runStage').textContent = 'Enter a valid grade (e.g. 9.5)';
+    document.getElementById('runHint').textContent  = '';
+    document.getElementById('runProgress').classList.add('visible');
+    return;
+  }
+
+  const box = document.getElementById('runLog');
+  box.innerHTML = '';
+  box.classList.remove('visible');
+  _lastLogLen = 0;
+  clearTimeout(_runPollTimer);
+  _setRunUI('running');
+
+  fetch('/api/run', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ cutoff, csv_path: window._uploadedCsvPath || null })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        _setRunUI('error');
+        document.getElementById('runStage').textContent = data.error;
+        return;
+      }
+      _pollStatus();
+    })
+    .catch(() => {
+      _setRunUI('error');
+      document.getElementById('runStage').textContent = 'Cannot reach server';
+      document.getElementById('runHint').textContent  = 'Is serve.py running?';
+    });
+}
+
+document.getElementById('runCutoffInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runCutoff();
+});
+/* ════════════════════════════════════════════════════════════════════
+   CSV UPLOAD
+════════════════════════════════════════════════════════════════════ */
+window._uploadedCsvPath = null;
+function onCsvSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  const lb = document.getElementById('csvLabel'), st = document.getElementById('csvStatus');
+  lb.textContent = '⏳ Uploading…'; lb.style.color = 'var(--muted)';
+  st.textContent = 'Uploading ' + file.name + '…';
+  const fd = new FormData(); fd.append('file', file);
+  fetch('/api/upload', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+    if (d.ok) {
+      window._uploadedCsvPath = d.csv_path;
+      lb.textContent = '✓ ' + d.filename; lb.style.color = 'var(--green)';
+      st.textContent = '✓ Ready — ' + d.filename; st.style.color = 'var(--green)';
+    } else { lb.textContent = '✗ Error'; lb.style.color = 'var(--red)'; st.textContent = d.error; }
+  }).catch(e => { lb.textContent = '✗ Failed'; st.textContent = e.message; });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PATCH render() — AI + mining metrics + economics
+════════════════════════════════════════════════════════════════════ */
+/* renderExtras — called after every render() to update AI, metrics, economics */
+function renderExtras(c) {
+  const d = cache[c]; if (!d) return;
+  // AI card — dilution risk counts
+  const rc = d.dilution_risk_counts || {};
+  tt('ai-risk-high', (rc['HIGH']||0).toLocaleString());
+  tt('ai-risk-med',  (rc['MEDIUM']||0).toLocaleString());
+  tt('ai-risk-low',  (rc['LOW']||0).toLocaleString());
+  tt('ai-seq-status', d.sequence_plan && d.sequence_plan.length > 0 ? '✓ ' + d.sequence_plan.length + ' stopes ranked' : '—');
+  // Mining metrics — clean, non-redundant
+  const oreT  = d.ore_tonnes  || 0;
+  const wstT  = d.waste_tonnes|| 0;
+  const totT  = oreT + wstT;
+  tt('m-cutoff',   c+' g/t');
+  tt('m-volume',   d.stope_volume_m3 ? d.stope_volume_m3.toLocaleString()+'m³' : '—');
+  tt('m-total-t',  totT > 0 ? (totT/1e6).toFixed(2)+'Mt' : '—');
+  tt('m-oret',     oreT > 0 ? (oreT/1e6).toFixed(2)+'Mt' : '—');
+  tt('m-wastet',   wstT > 0 ? (wstT/1e6).toFixed(2)+'Mt' : '—');
+  tt('m-au',       d.mean_grade ? d.mean_grade+' g/t' : '—');
+  tt('m-goldg',    d.gold_grams ? (d.gold_grams/1e6).toFixed(2)+'Mg' : '—');
+  tt('m-goldoz',   d.gold_oz    ? (d.gold_oz/1e6).toFixed(3)+'Moz' : '—');
+  // Economics
+  window._baseProfit = null;
+  calcEcon(d, parseFloat(document.getElementById('goldPriceSlider').value) || 3000);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ECONOMICS ENGINE
+════════════════════════════════════════════════════════════════════ */
+window._econData = null; window._baseProfit = null;
+function fmtUSD(v) {
+  if (v==null||isNaN(v)) return '—';
+  const s=v<0?'-':'', a=Math.abs(v);
+  if (a>=1e9) return s+'$'+(a/1e9).toFixed(2)+'B';
+  if (a>=1e6) return s+'$'+(a/1e6).toFixed(1)+'M';
+  if (a>=1e3) return s+'$'+Math.round(a/1e3)+'K';
+  return s+'$'+Math.round(a).toLocaleString();
+}
+window._baseGoldPrice = 3000;
+function setGoldBase() {
+  const p = parseFloat(document.getElementById('goldPriceInput').value);
+  if (isNaN(p) || p < 1500 || p > 5000) return;
+  window._baseGoldPrice = p;
+  const lbl = document.getElementById('basePriceLabel');
+  if (lbl) lbl.textContent = '$' + p.toLocaleString() + ' /oz';
+  if (window._econData) calcEcon(window._econData, p);
+}
+function onGoldPriceChange(val) {
+  const p = parseFloat(val);
+  const inp = document.getElementById('goldPriceInput');
+  if (inp && document.activeElement !== inp) inp.value = p;
+  if (window._econData) calcEcon(window._econData, p);
+}
+function onGoldPriceInput(val) {
+  const p = parseFloat(val);
+  if (isNaN(p) || p < 1500 || p > 5000) return;
+  const sld = document.getElementById('goldPriceSlider');
+  if (sld) sld.value = p;
+  if (window._econData) calcEcon(window._econData, p);
+}
+function calcEcon(d, gp) {
+  window._econData = d;
+  const rec=d.recovery_pct||0.95, mc=d.mining_cost_t||35, mill=d.milling_cost_t||25;
+  const ct=mc+mill, oz=d.gold_oz||0;
+  const tot=d.total_tonnes||((d.ore_tonnes||0)+(d.waste_tonnes||0));
+  // Break-even = minimum gold price for the ACTIVE stopes at this price
+  // Full plan break-even (fixed property of deposit)
+  const fullCost = tot * ct;
+  const fullBe = d.avg_breakeven_usd || (oz*rec>0 ? fullCost/(oz*rec) : 0);
+  // At lower prices, fewer stopes active — but break-even is a deposit property
+  // so we keep it fixed. What changes is margin and stope count.
+  const be = fullBe;
+  const margin = gp - be;
+  // At lower gold prices, sub-economic stopes wouldn't be mined → cost reduces
+  const profFrac = gp >= be ? 1.0 : Math.max(0, gp / Math.max(be, 1));
+  const activeTonnes = tot * profFrac;
+  const activeOz     = oz  * profFrac;
+  const rev    = activeOz * gp * rec;
+  const cost   = activeTonnes * ct;
+  const profit = rev - cost;
+  const ppt    = activeTonnes > 0 ? profit / activeTonnes : 0;
+  const profPct = Math.round(profFrac * 100);
+  const profN   = Math.round((d.stope_count||0) * profFrac);
+  // Delta vs $3,000 baseline
+  // Delta vs user-defined base price (default $3,000)
+  const BASE_PRICE = window._baseGoldPrice || 3000;
+  const baseFrac   = BASE_PRICE >= be ? 1.0 : Math.max(0, BASE_PRICE/Math.max(be,1));
+  const baseProfit = oz*baseFrac*BASE_PRICE*rec - tot*baseFrac*ct;
+  const delta = profit - baseProfit;
+  const dl = document.getElementById('e-delta-lbl');
+  if (dl) dl.textContent = Math.abs(gp-BASE_PRICE) < 25 ? 'at base' : 'vs base';
+  const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const ct2=document.getElementById('e-ctag'); if(ct2&&typeof active!=='undefined')ct2.textContent=active+' g/t';
+  const pe=document.getElementById('e-profit');
+  if(pe){pe.textContent=fmtUSD(profit);pe.className='ekp-v '+(profit>=0?'g':'r');}
+  st('e-profit-sub','Revenue '+fmtUSD(rev)+' — Cost '+fmtUSD(cost));
+  st('e-revenue',fmtUSD(rev)); st('e-cost',fmtUSD(cost));
+  const bePct = gp > 0 ? Math.round(be/gp*100) : 0;
+  const beMargin = gp - be;
+  st('e-breakeven', '$' + Math.round(be).toLocaleString() + ' /oz — ' +
+    (beMargin >= 0
+      ? '$' + Math.round(beMargin).toLocaleString() + ' margin'
+      : 'above spot price'));
+  st('e-profitable',profN.toLocaleString());
+  st('e-profitable-sub',profPct+'% of '+(d.stope_count||0).toLocaleString()+' stopes');
+  const ppe=document.getElementById('e-ppt');
+  if(ppe){ppe.textContent=fmtUSD(ppt)+' /t';ppe.className='ekp-v '+(ppt>=0?'g':'r');}
+  st('e-sens-profit',fmtUSD(profit));
+  const de=document.getElementById('e-sens-delta');
+  if(de){de.textContent=(delta>=0?'+':'')+fmtUSD(delta);de.style.color=delta>=0?'var(--green)':'var(--red)';}
+  const me=document.getElementById('e-sens-margin');
+  if(me){me.textContent=margin>=0?'+'+fmtUSD(margin)+'/oz':fmtUSD(Math.abs(margin))+'/oz below';me.style.color=margin>=0?'var(--green)':'var(--red)';}
+  const zones=d.zone_summary, zb=document.getElementById('zoneBlock');
+  if(zones&&zones.length>0&&zb){
+    zb.style.display='block';
+    const nm=['Zone A — Primary','Zone B — Secondary','Zone C — Tertiary'], cl=['var(--gold)','var(--green)','var(--blue)'];
+    document.getElementById('zoneGrid').innerHTML=zones.map((z,i)=>`<div class="ez">
+      <div class="ez-nm" style="color:${cl[i]}">${nm[i]||'Zone '+(i+1)}</div>
+      <div class="ez-r"><span>Stopes</span><b>${(z.stopes||0).toLocaleString()}</b></div>
+      <div class="ez-r"><span>Gold</span><b style="color:var(--gold)">${((z.gold_oz||0)/1e6).toFixed(2)}M oz</b></div>
+      <div class="ez-r"><span>Grade</span><b>${(z.mean_grade||0).toFixed(2)} g/t</b></div>
+      <div class="ez-r"><span>Depth</span><b>${(z.depth_m||0).toFixed(0)}m</b></div>
+      ${z.profit_usd!=null?'<div class="ez-r"><span>Profit</span><b style="color:var(--green)">'+fmtUSD(z.profit_usd)+'</b></div>':''}</div>`).join('');
+  } else if(zb) zb.style.display='none';
+  // Dilution risk panel
+  const rc2 = d.dilution_risk_counts || {};
+  const rb = document.getElementById('riskBlock');
+  const hasRisk = rc2['HIGH']!=null || rc2['MEDIUM']!=null || rc2['LOW']!=null;
+  if (hasRisk && rb) {
+    rb.style.display = 'block';
+    const st2=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    st2('risk-low-count',  (rc2['LOW']||0).toLocaleString());
+    st2('risk-med-count',  (rc2['MEDIUM']||0).toLocaleString());
+    st2('risk-high-count', (rc2['HIGH']||0).toLocaleString());
+  } else if (rb) rb.style.display='none';
+
+  // Sequence plan table
+  const seq = d.sequence_plan, sb2 = document.getElementById('sequenceBlock');
+  if (seq && seq.length > 0 && sb2) {
+    sb2.style.display = 'block';
+    const riskBadge = r => {
+      const risk = r.DILUTION_RISK || 'MEDIUM';
+      if (risk==='HIGH')   return '<span class="rb-high">🔴 HIGH</span>';
+      if (risk==='LOW')    return '<span class="rb-low">🟢 LOW</span>';
+      return '<span class="rb-med">🟡 MED</span>';
+    };
+    document.getElementById('sequenceBody').innerHTML = seq.map((r,i) => {
+      const wp  = r.WASTE_RATIO!=null ? (r.WASTE_RATIO*100).toFixed(0)+'%' : '—';
+      const wc  = parseFloat(wp)>30?'var(--red)':parseFloat(wp)>20?'var(--gold)':'var(--green)';
+      const vd  = r.VALUE_DENSITY!=null ? r.VALUE_DENSITY.toFixed(3)+' oz/t' : '—';
+      return `<tr>
+        <td class="epr">${r.MINE_SEQUENCE||i+1}</td>
+        <td class="eploc">${(r.X_ORIGIN||0).toFixed(0)} · ${(r.Y_ORIGIN||0).toFixed(0)} · ${(r.Z_ORIGIN||0).toFixed(0)}</td>
+        <td><b>${(r.WAVG_GRADE||0).toFixed(2)}</b> g/t</td>
+        <td>${((r.GOLD_OZ||0)).toLocaleString(undefined,{maximumFractionDigits:0})} oz</td>
+        <td style="color:var(--green);font-size:10px">${vd}</td>
+        <td style="color:${wc}">${wp}</td>
+        <td>${riskBadge(r)}</td>
+      </tr>`;
+    }).join('');
+  } else if (sb2) sb2.style.display='none';
+}
+
+</script>
+</body>
+</html>

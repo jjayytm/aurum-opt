@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Generated outputs — do not commit large binary files
+outputs/
+*.dxf
+*.csv
+results.json
+results_*.json
+results_index.json
+points3d.json
+uploaded_*.csv
+assets/
+
+# Keep sample results for reference (override above for specific files)
+!outputs/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Block model data — large file, don't commit
+Hackathon 2026 - Block Model.csv
+*.csv
+# Keep results CSV if needed
+!stopes_results.csv
