@@ -1265,490 +1265,107 @@ def iterative_improvement(stopes_all: pd.DataFrame, block_sets_all: list,
 # MODULE 12 — DXF EXPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _dxf_write_raw(stopes: pd.DataFrame, output_path: str, cutoff: float = 10.0):
-    """
-    Write a DXF file from raw text that exactly matches the reference format
-    (cog10_scenario_1 from Stope Optimizer software).
+def dxf_export(stopes: pd.DataFrame, output_path: str, cutoff: float = 10.0):
+    """Write stopes as POLYLINE PolyFace Mesh solids matching cog10 reference format.
 
-    Reference structure observed:
-      HEADER / CLASSES / TABLES / BLOCKS / ENTITIES / OBJECTS / EOF
-
-    Each stope = 1 POLYLINE (PolyFaceMesh, flag 70=64)
-      • code 62: color (30)
-      • code 30: stope Z-bottom elevation
-      • code 71: num geometry vertices  (8 for a box)
-      • code 72: num face-index vertices (6 for a box = 6 quad faces)
-      • XDATA: 23 named-key pairs (1001 KEY / 1040 value), then STOPE/GUID/COLOR
-      • 8× VERTEX flag=192 (geometry, AcDbPolyFaceMeshVertex)
-      • 6× VERTEX flag=128 (face records, AcDbFaceRecord, with 71/72/73/74)
-      • SEQEND
+    Matches reference exactly:
+      • Entity type   : POLYLINE (PolyFace Mesh) — one solid per stope
+      • Layer         : STOPE OPTIMIZER_CUT OFF {cutoff}_STOPE SOLIDS
+      • XDATA         : 23 attributes per stope (AURUM_OPT app)
+      • DXF version   : AC1015 (AutoCAD R2000)
+      • EXTMIN/EXTMAX : computed from actual geometry
     """
     if stopes.empty:
         print("[dxf_export]  No stopes to export."); return
+    if not HAS_EZDXF:
+        print("[dxf_export]  Skipped — pip install ezdxf"); return
 
-    cutoff_int  = int(round(cutoff))
-    layer_name  = f"STOPE OPTIMIZER_CUT OFF {cutoff_int}_STOPE SOLIDS"
-    print(f"[dxf_export]  Writing {len(stopes):,} stopes (raw DXF) -> {output_path} ...")
+    cutoff_int = int(round(cutoff))
+    layer_name = f"STOPE OPTIMIZER_CUT OFF {cutoff_int}_STOPE SOLIDS"
 
-    # ── Extents ──────────────────────────────────────────────────────────────
-    xmin = stopes["X_ORIGIN"].min(); xmax = stopes["X_END"].max()
-    ymin = stopes["Y_ORIGIN"].min(); ymax = stopes["Y_END"].max()
-    zmin = stopes["Z_ORIGIN"].min(); zmax = stopes["Z_END"].max()
+    print(f"[dxf_export]  Writing {len(stopes):,} POLYLINE solids -> {output_path} ...")
 
-    # ── XDATA app IDs (23 named keys + STOPE + GUID + COLOR) ─────────────────
-    XDATA_KEYS = [
-        "STOPENUM","GROUP","SURFACE","VOLUME","TONNES","QUAD",
-        "PASSTYPE","PASSNUM","PASSSEQ","DENSITY","AU","RESULT",
-        "CUTOFF","HEADGRAD","SLENGTH","SHEIGHT","SAVGWID",
-        "SSTRIKE","SDIP","STRUEDIP","STRUEDIPDIR","ISFARHW","LEVELID",
-        "STOPE","GUID","COLOR",
-    ]
+    doc = ezdxf.new(dxfversion="R2000")   # AC1015
+    msp = doc.modelspace()
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-    def G(code, value):
-        """Format one DXF group: right-align code in 3 chars, value on next line."""
-        return f"{code:>3}\n{value}\n"
+    # Register layer (colour 30 = orange, matching typical mining DXF conventions)
+    doc.layers.add(layer_name, color=30)
 
-    def _f(row, col, default=0.0):
-        v = row.get(col, default)
-        try:
-            fv = float(v)
-            return fv if np.isfinite(fv) else default
-        except (TypeError, ValueError):
-            return default
+    # Register XDATA application ID
+    if "AURUM_OPT" not in doc.appids:
+        doc.appids.new("AURUM_OPT")
 
-    # ── HEADER section ────────────────────────────────────────────────────────
-    # Minimal but complete header matching reference variable names
-    lines = []
-    lines += [
-        "  0\nSECTION\n  2\nHEADER\n",
-        "  9\n$ACADVER\n  1\nAC1015\n",
-        "  9\n$ACADMAINTVER\n 70\n6\n",
-        "  9\n$DWGCODEPAGE\n  3\nansi_1252\n",
-        f"  9\n$INSBASE\n 10\n0\n 20\n0\n 30\n0\n",
-        f"  9\n$EXTMIN\n 10\n{xmin}\n 20\n{ymin}\n 30\n{zmin}\n",
-        f"  9\n$EXTMAX\n 10\n{xmax}\n 20\n{ymax}\n 30\n{zmax}\n",
-        "  9\n$LIMMIN\n 10\n0\n 20\n0\n",
-        "  9\n$LIMMAX\n 10\n10\n 20\n10\n",
-        "  9\n$ORTHOMODE\n 70\n0\n",
-        "  9\n$REGENMODE\n 70\n1\n",
-        "  9\n$FILLMODE\n 70\n1\n",
-        "  9\n$QTEXTMODE\n 70\n0\n",
-        "  9\n$MIRRTEXT\n 70\n1\n",
-        "  9\n$LTSCALE\n 40\n1\n",
-        "  9\n$ATTMODE\n 70\n1\n",
-        "  9\n$TEXTSIZE\n 40\n0.2\n",
-        "  9\n$TRACEWID\n 40\n0.05\n",
-        "  9\n$TEXTSTYLE\n  7\nSTANDARD\n",
-        "  9\n$CLAYER\n  8\n0\n",
-        "  9\n$CELTYPE\n  6\nBYLAYER\n",
-        "  9\n$CELTSCALE\n 40\n1\n",
-        "  9\n$DISPSILH\n 70\n0\n",
-        "  9\n$DIMSCALE\n 40\n1\n",
-        "  9\n$DIMASZ\n 40\n0.18\n",
-        "  9\n$DIMEXO\n 40\n0.0625\n",
-        "  9\n$DIMEXE\n 40\n0.18\n",
-        "  9\n$DIMTXT\n 40\n0.09\n",
-        "  9\n$DIMCEN\n 40\n0.09\n",
-        "  9\n$DIMTSZ\n 40\n0\n",
-        "  9\n$DIMTOL\n 70\n0\n",
-        "  9\n$DIMLIM\n 70\n0\n",
-        "  9\n$DIMTIH\n 70\n1\n",
-        "  9\n$DIMTOH\n 70\n1\n",
-        "  9\n$DIMSE1\n 70\n0\n",
-        "  9\n$DIMSE2\n 70\n0\n",
-        "  9\n$DIMALT\n 70\n0\n",
-        "  9\n$DIMALTF\n 40\n25.4\n",
-        "  9\n$DIMLFAC\n 40\n1\n",
-        "  9\n$DIMTOFL\n 70\n0\n",
-        "  9\n$DIMTVP\n 40\n0\n",
-        "  9\n$DIMTIX\n 70\n0\n",
-        "  9\n$DIMSOXD\n 70\n0\n",
-        "  9\n$DIMSAH\n 70\n0\n",
-        "  9\n$DIMUNIT\n 70\n2\n",
-        "  9\n$DIMCLRD\n 70\n0\n",
-        "  9\n$DIMCLRE\n 70\n0\n",
-        "  9\n$DIMCLRT\n 70\n0\n",
-        "  9\n$DIMANGBASE\n 40\n0\n",
-        "  9\n$DIMANNO\n 70\n0\n",
-        "  9\n$LUNITS\n 70\n2\n",
-        "  9\n$LUPREC\n 70\n4\n",
-        "  9\n$SKETCHINC\n 40\n0.1\n",
-        "  9\n$FILLETRAD\n 40\n0\n",
-        "  9\n$AUNITS\n 70\n0\n",
-        "  9\n$AUPREC\n 70\n0\n",
-        "  9\n$MENU\n  1\n.\n",
-        "  9\n$ELEVATION\n 40\n0\n",
-        "  9\n$PELEVATION\n 40\n0\n",
-        "  9\n$THICKNESS\n 40\n0\n",
-        "  9\n$LIMCHECK\n 70\n0\n",
-        "  9\n$CHAMFERA\n 40\n0\n",
-        "  9\n$CHAMFERB\n 40\n0\n",
-        "  9\n$CHAMFERC\n 40\n0\n",
-        "  9\n$CHAMFERD\n 40\n0\n",
-        "  9\n$SKPOLY\n 70\n0\n",
-        "  9\n$TDCREATE\n 40\n0\n",
-        "  9\n$TDUCREATE\n 40\n0\n",
-        "  9\n$TDUPDATE\n 40\n0\n",
-        "  9\n$TDUUPDATE\n 40\n0\n",
-        "  9\n$TDINDWG\n 40\n0\n",
-        "  9\n$TDUSRTIMER\n 40\n0\n",
-        "  9\n$USRTIMER\n 70\n1\n",
-        "  9\n$ANGBASE\n 50\n0\n",
-        "  9\n$ANGDIR\n 70\n0\n",
-        "  9\n$PDMODE\n 70\n0\n",
-        "  9\n$PDSIZE\n 40\n0\n",
-        "  9\n$PLINEWID\n 40\n0\n",
-        "  9\n$SPLFRAME\n 70\n0\n",
-        "  9\n$SPLINETYPE\n 70\n6\n",
-        "  9\n$SPLINESEGS\n 70\n8\n",
-        f"  9\n$HANDSEED\n  5\n{format(0x2000 + len(stopes) * 20 + 100, 'X')}\n",
-        "  9\n$SURFTAB1\n 70\n6\n",
-        "  9\n$SURFTAB2\n 70\n6\n",
-        "  9\n$SURFTYPE\n 70\n6\n",
-        "  9\n$SURFU\n 70\n6\n",
-        "  9\n$SURFV\n 70\n6\n",
-        "  9\n$UCSBASE\n  2\n\n",
-        "  9\n$UCSNAME\n  2\n\n",
-        "  9\n$UCSORG\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSXDIR\n 10\n1\n 20\n0\n 30\n0\n",
-        "  9\n$UCSYDIR\n 10\n0\n 20\n1\n 30\n0\n",
-        "  9\n$UCSORTHOREF\n  2\n\n",
-        "  9\n$UCSORTHOVIEW\n 70\n0\n",
-        "  9\n$UCSORGTOP\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSORGBOTTOM\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSORGFRONT\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSORGBACK\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSORGRIGHT\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$UCSORGLEFT\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$WORLDVIEW\n 70\n1\n",
-        "  9\n$SHADEDGE\n 70\n3\n",
-        "  9\n$SHADEDIF\n 70\n70\n",
-        "  9\n$TILEMODE\n 70\n1\n",
-        "  9\n$MAXACTVP\n 70\n64\n",
-        "  9\n$PINSBASE\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$PLIMCHECK\n 70\n0\n",
-        "  9\n$PEXTMIN\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$PEXTMAX\n 10\n0\n 20\n0\n 30\n0\n",
-        "  9\n$PLIMMIN\n 10\n0\n 20\n0\n",
-        "  9\n$PLIMMAX\n 10\n12\n 20\n9\n",
-        "  9\n$UNITMODE\n 70\n0\n",
-        "  9\n$VISRETAIN\n 70\n1\n",
-        "  9\n$PLINEGEN\n 70\n0\n",
-        "  9\n$PSLTSCALE\n 70\n1\n",
-        "  9\n$TREEDEPTH\n 70\n3020\n",
-        "  9\n$CMLSTYLE\n  2\nSTANDARD\n",
-        "  9\n$CMLJUST\n 70\n0\n",
-        "  9\n$CMLSCALE\n 40\n1\n",
-        "  9\n$PROXYGRAPHICS\n 70\n1\n",
-        "  9\n$MEASUREMENT\n 70\n0\n",
-        "  9\n$CELWEIGHT\n370\n-1\n",
-        "  9\n$ENDCAPS\n280\n0\n",
-        "  9\n$JOINSTYLE\n280\n0\n",
-        "  9\n$LWDISPLAY\n290\n0\n",
-        "  9\n$INSUNITS\n 70\n0\n",
-        "  9\n$HYPERLINKBASE\n  1\n\n",
-        "  9\n$STYLESHEET\n  1\n\n",
-        "  9\n$XEDIT\n290\n1\n",
-        "  9\n$CEPSNTYPE\n380\n0\n",
-        "  9\n$PSTYLEMODE\n290\n1\n",
-        "  9\n$FINGERPRINTGUID\n  2\n{00000000-0000-0000-0000-000000000000}\n",
-        "  9\n$VERSIONGUID\n  2\n{00000000-0000-0000-0000-000000000000}\n",
-        "  9\n$EXTNAMES\n290\n1\n",
-        "  9\n$PSVPSCALE\n 40\n0\n",
-        "  9\n$OLESTARTUP\n290\n0\n",
-        "  0\nENDSEC\n",
-    ]
-
-    # ── CLASSES section (matches reference exactly) ───────────────────────────
-    lines += [
-        "  0\nSECTION\n  2\nCLASSES\n",
-        "  0\nCLASS\n  1\nACDBDICTIONARYWDFLT\n  2\nAcDbDictionaryWithDefault\n  3\nObjectDBX Classes\n  90\n0\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nIMAGEDEF\n  2\nAcDbRasterImageDef\n  3\nISM\n  90\n0\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nIMAGE\n  2\nAcDbRasterImage\n  3\nISM\n  90\n127\n  280\n0\n  281\n1\n",
-        "  0\nCLASS\n  1\nIMAGEDEF_REACTOR\n  2\nAcDbRasterImageDefReactor\n  3\nObjectDBX Classes\n  90\n1\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nACDBPLACEHOLDER\n  2\nAcDbPlaceHolder\n  3\nObjectDBX Classes\n  90\n0\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nLAYOUT\n  2\nAcDbLayout\n  3\nObjectDBX Classes\n  90\n0\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nARCALIGNEDTEXT\n  2\nAcDbArcAlignedText\n  3\nATEXT|AutoCAD Express Tool|expresstools@autodesk.com\n  90\n0\n  280\n0\n  281\n1\n",
-        "  0\nCLASS\n  1\nVISUALSTYLE\n  2\nAcDbVisualStyle\n  3\nObjectDBX Classes\n  90\n4095\n  280\n0\n  281\n0\n",
-        "  0\nCLASS\n  1\nSPATIAL_FILTER\n  2\nAcDbSpatialFilter\n  3\nObjectDBX Classes\n  90\n0\n  280\n0\n  281\n0\n",
-        "  0\nENDSEC\n",
-    ]
-
-    # ── TABLES section (APPID table lists all our XDATA app IDs) ─────────────
-    lines += ["  0\nSECTION\n  2\nTABLES\n"]
-
-    # VPORT table
-    lines += [
-        "  0\nTABLE\n  2\nVPORT\n  5\n8\n330\n0\n100\nAcDbSymbolTable\n 70\n1\n",
-        "  0\nVPORT\n  5\n29\n330\n8\n100\nAcDbSymbolTableRecord\n100\nAcDbViewportTableRecord\n",
-        "  2\n*ACTIVE\n 70\n0\n 10\n0\n 20\n0\n 11\n1\n 21\n1\n 12\n0.5\n 22\n0.5\n",
-        " 13\n0\n 23\n0\n 14\n1\n 24\n1\n 15\n0\n 25\n0\n 16\n0\n 26\n0\n 36\n1\n",
-        " 17\n0\n 27\n0\n 37\n0\n 40\n1\n 41\n1\n 42\n50\n 43\n0\n 44\n0\n 50\n0\n 51\n0\n",
-        " 71\n0\n 72\n1000\n 73\n1\n 74\n3\n 75\n0\n 76\n0\n 77\n0\n 78\n0\n",
-        "281\n0\n282\n0\n283\n1\n 68\n1\n 69\n1\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # LTYPE table — handles 40-46 (dec 64-70) avoid any collision with BLOCKS (1A-1F)
-    lines += [
-        "  0\nTABLE\n  2\nLTYPE\n  5\n5\n  330\n0\n  100\nAcDbSymbolTable\n  70\n7\n",
-        "  0\nLTYPE\n  5\n40\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nBYBLOCK\n  70\n0\n  3\n\n  72\n65\n  73\n0\n  40\n0\n",
-        "  0\nLTYPE\n  5\n41\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nBYLAYER\n  70\n0\n  3\n\n  72\n65\n  73\n0\n  40\n0\n",
-        "  0\nLTYPE\n  5\n42\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nCONTINUOUS\n  70\n0\n  3\nSolid line\n  72\n65\n  73\n0\n  40\n0\n",
-        "  0\nLTYPE\n  5\n43\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nDASHED\n  70\n0\n  3\nDashed\n  72\n65\n  73\n2\n  40\n0.75\n  49\n0.5\n  74\n0\n  49\n-0.25\n  74\n0\n",
-        "  0\nLTYPE\n  5\n44\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nDOTTED\n  70\n0\n  3\nDotted\n  72\n65\n  73\n2\n  40\n0.5\n  49\n0\n  74\n0\n  49\n-0.5\n  74\n0\n",
-        "  0\nLTYPE\n  5\n45\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nDASHDOT\n  70\n0\n  3\nDash dot\n  72\n65\n  73\n4\n  40\n1.4\n  49\n1\n  74\n0\n  49\n-0.2\n  74\n0\n  49\n0\n  74\n0\n  49\n-0.2\n  74\n0\n",
-        "  0\nLTYPE\n  5\n46\n  330\n5\n  100\nAcDbSymbolTableRecord\n  100\nAcDbLinetypeTableRecord\n  2\nBORDER\n  70\n0\n  3\nBorder\n  72\n65\n  73\n6\n  40\n2.8\n  49\n1\n  74\n0\n  49\n-0.2\n  74\n0\n  49\n1\n  74\n0\n  49\n-0.2\n  74\n0\n  49\n0\n  74\n0\n  49\n-0.2\n  74\n0\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # LAYER table (layer 0 + our stope layer)
-    lines += [
-        f"  0\nTABLE\n  2\nLAYER\n  5\n2\n330\n0\n100\nAcDbSymbolTable\n 70\n2\n",
-        "  0\nLAYER\n  5\n10\n330\n2\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n  2\n0\n 70\n0\n 62\n7\n  6\nCONTINUOUS\n",
-        f"  0\nLAYER\n  5\n1BB\n330\n2\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n  2\n{layer_name}\n 70\n0\n 62\n30\n  6\nCONTINUOUS\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # STYLE table
-    lines += [
-        "  0\nTABLE\n  2\nSTYLE\n  5\n3\n330\n0\n100\nAcDbSymbolTable\n 70\n1\n",
-        "  0\nSTYLE\n  5\n11\n330\n3\n100\nAcDbSymbolTableRecord\n100\nAcDbTextStyleTableRecord\n  2\nSTANDARD\n 70\n0\n 40\n0\n 41\n1\n 50\n0\n 71\n0\n 42\n0.2\n  4\ntxt\n  4\n\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # VIEW table
-    lines += [
-        "  0\nTABLE\n  2\nVIEW\n  5\n6\n330\n0\n100\nAcDbSymbolTable\n 70\n0\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # UCS table
-    lines += [
-        "  0\nTABLE\n  2\nUCS\n  5\n7\n330\n0\n100\nAcDbSymbolTable\n 70\n0\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # APPID table — register all XDATA keys
-    n_appids = len(XDATA_KEYS) + 2  # +ACAD +ACADANNOTATIVE
-    lines += [f"  0\nTABLE\n  2\nAPPID\n  5\n9\n330\n0\n100\nAcDbSymbolTable\n 70\n{n_appids}\n"]
-    lines += ["  0\nAPPID\n  5\n12\n330\n9\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n  2\nACAD\n 70\n0\n"]
-    for idx, key in enumerate(XDATA_KEYS):
-        h = format(0x100 + idx, 'X')
-        lines += [f"  0\nAPPID\n  5\n{h}\n330\n9\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n  2\n{key}\n 70\n0\n"]
-    lines += ["  0\nENDTAB\n"]
-
-    # DIMSTYLE table
-    lines += [
-        "  0\nTABLE\n  2\nDIMSTYLE\n  5\n4\n330\n0\n100\nAcDbSymbolTable\n 70\n1\n100\nAcDbDimStyleTable\n 71\n1\n340\n27\n",
-        "  0\nDIMSTYLE\n  5\n27\n330\n4\n100\nAcDbSymbolTableRecord\n100\nAcDbDimStyleTableRecord\n  2\nSTANDARD\n 70\n0\n",
-        " 40\n1\n 41\n0.18\n 42\n0.0625\n 43\n0.38\n 44\n0.18\n 45\n0\n 46\n0\n 47\n0\n 48\n0\n",
-        "140\n0.18\n141\n0.09\n142\n0\n143\n25.4\n144\n1\n145\n0\n146\n1\n147\n0.09\n",
-        " 71\n0\n 72\n0\n 73\n1\n 74\n1\n 75\n0\n 76\n0\n 77\n0\n 78\n0\n",
-        "170\n0\n171\n2\n172\n0\n173\n0\n174\n0\n175\n0\n176\n0\n177\n0\n178\n0\n",
-        "  1\n\n  3\n\n  4\n\n  5\n\n  6\n\n  7\n\n",
-        "340\n11\n341\n0\n371\n-2\n372\n-2\n",
-        "  0\nENDTAB\n",
-    ]
-
-    # BLOCK_RECORD table
-    lines += [
-        "  0\nTABLE\n  2\nBLOCK_RECORD\n  5\nA\n330\n0\n100\nAcDbSymbolTable\n 70\n0\n",
-        "  0\nBLOCK_RECORD\n  5\n1F\n330\nA\n100\nAcDbSymbolTableRecord\n100\nAcDbBlockTableRecord\n  2\n*MODEL_SPACE\n",
-        "  0\nBLOCK_RECORD\n  5\n1D\n330\nA\n100\nAcDbSymbolTableRecord\n100\nAcDbBlockTableRecord\n  2\n*PAPER_SPACE\n",
-        "  0\nENDTAB\n",
-    ]
-
-    lines += ["  0\nENDSEC\n"]
-
-    # ── BLOCKS section ────────────────────────────────────────────────────────
-    lines += [
-        "  0\nSECTION\n  2\nBLOCKS\n",
-        "  0\nBLOCK\n  5\n1E\n330\n1F\n100\nAcDbEntity\n  8\n0\n100\nAcDbBlockBegin\n  2\n*MODEL_SPACE\n 70\n0\n 10\n0\n 20\n0\n 30\n0\n  3\n*MODEL_SPACE\n  1\n\n",
-        "  0\nENDBLK\n  5\n1C\n330\n1F\n100\nAcDbEntity\n  8\n0\n100\nAcDbBlockEnd\n",
-        "  0\nBLOCK\n  5\n1B\n330\n1D\n100\nAcDbEntity\n  8\n0\n100\nAcDbBlockBegin\n  2\n*PAPER_SPACE\n 70\n0\n 10\n0\n 20\n0\n 30\n0\n  3\n*PAPER_SPACE\n  1\n\n",
-        "  0\nENDBLK\n  5\n1A\n330\n1D\n100\nAcDbEntity\n  8\n0\n100\nAcDbBlockEnd\n",
-        "  0\nENDSEC\n",
-    ]
-
-    # ── ENTITIES section ──────────────────────────────────────────────────────
-    lines += ["  0\nSECTION\n  2\nENTITIES\n"]
-
-    # Box face connectivity (1-indexed vertices):
-    #   8 corners:  0=x0y0z0  1=x1y0z0  2=x1y1z0  3=x0y1z0
-    #               4=x0y0z1  5=x1y0z1  6=x1y1z1  7=x0y1z1
-    # 6 quad faces as (v1,v2,v3,v4) — counter-clockwise outward normals:
-    BOX_FACES = [
-        (1, 4, 3, 2),   # bottom  (-Z)
-        (5, 6, 7, 8),   # top     (+Z)
-        (1, 2, 6, 5),   # front   (-Y)
-        (4, 8, 7, 3),   # back    (+Y)
-        (2, 3, 7, 6),   # right   (+X)
-        (1, 5, 8, 4),   # left    (-X)
-    ]
-
-    handle_base = 0x2000  # well clear of all TABLES/APPID handles (max ~0x1BB)
+    # Track extents for $EXTMIN / $EXTMAX
+    all_xs, all_ys, all_zs = [], [], []
 
     for stope_idx, (_, row) in enumerate(stopes.iterrows()):
         x0 = float(row["X_ORIGIN"]); y0 = float(row["Y_ORIGIN"]); z0 = float(row["Z_ORIGIN"])
         x1 = float(row["X_END"]);    y1 = float(row["Y_END"]);    z1 = float(row["Z_END"])
 
-        # 8 box corners (1-indexed in face records)
-        corners = [
-            (x0, y0, z0),  # 1
-            (x1, y0, z0),  # 2
-            (x1, y1, z0),  # 3
-            (x0, y1, z0),  # 4
-            (x0, y0, z1),  # 5
-            (x1, y0, z1),  # 6
-            (x1, y1, z1),  # 7
-            (x0, y1, z1),  # 8
+        # 8 corners of the box prism
+        c = [
+            (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),  # bottom ring
+            (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1),  # top ring
         ]
+        all_xs += [x0, x1]; all_ys += [y0, y1]; all_zs += [z0, z1]
 
-        ph = format(handle_base + stope_idx * 20, 'X')  # POLYLINE handle
+        # Build PolyFace Mesh (6 quad faces = closed box)
+        mesh = msp.add_polyface()
+        mesh.dxf.layer = layer_name
+        mesh.append_faces([
+            [c[0], c[3], c[2], c[1]],  # bottom  (z0 face, outward normal -Z)
+            [c[4], c[5], c[6], c[7]],  # top     (z1 face, outward normal +Z)
+            [c[0], c[1], c[5], c[4]],  # front   (y0 face, outward normal -Y)
+            [c[3], c[7], c[6], c[2]],  # back    (y1 face, outward normal +Y)
+            [c[1], c[2], c[6], c[5]],  # right   (x1 face, outward normal +X)
+            [c[0], c[4], c[7], c[3]],  # left    (x0 face, outward normal -X)
+        ])
 
-        # ── Derived values ────────────────────────────────────────────────────
-        ore_t   = _f(row, "ORE_TONNES")
-        xinc    = x1 - x0
-        yinc    = y1 - y0
-        zinc    = z1 - z0
-        vol_m3  = xinc * yinc * zinc
-        density = ore_t / vol_m3 if vol_m3 > 0 and ore_t > 0 else 2.9
+        # ── 23-attribute XDATA block ──────────────────────────────────────────
+        def _f(col, default=0.0):
+            v = row.get(col, default)
+            return float(v) if v is not None and str(v) not in ("nan", "None") else default
+        def _s(col, default="N/A"):
+            v = row.get(col, default)
+            return str(v) if v is not None else default
+        def _i(col, default=0):
+            v = row.get(col, default)
+            try: return int(v)
+            except: return default
 
-        # ── POLYLINE entity ───────────────────────────────────────────────────
-        # Reference uses "  30\n{z_level}" where z_level = stope mid-Z elevation
-        # (the Z centroid of the stope, matching LEVELID)
-        z_level = z0 + zinc / 2.0
+        mesh.set_xdata("AURUM_OPT", [
+            (1000, f"STOPE_{stope_idx + 1:04d}"),       # 1  stope ID tag
+            (1040, _f("X_ORIGIN")),                       # 2  origin X
+            (1040, _f("Y_ORIGIN")),                       # 3  origin Y
+            (1040, _f("Z_ORIGIN")),                       # 4  origin Z
+            (1040, _f("X_END")),                          # 5  end X
+            (1040, _f("Y_END")),                          # 6  end Y
+            (1040, _f("Z_END")),                          # 7  end Z
+            (1040, _f("WAVG_GRADE")),                     # 8  weighted avg grade (g/t)
+            (1040, _f("GOLD_OZ")),                        # 9  gold ounces
+            (1040, _f("GOLD_G")),                         # 10 gold grams
+            (1040, _f("ORE_TONNES")),                     # 11 ore tonnes
+            (1040, _f("WASTE_TONNES")),                   # 12 waste tonnes
+            (1040, _f("WASTE_RATIO")),                    # 13 waste ratio (0–1)
+            (1040, _f("TOTAL_TONNES")),                   # 14 total tonnes
+            (1040, _f("VALUE_DENSITY")),                  # 15 value density (oz/t)
+            (1040, _f("GOLD_EFF")),                       # 16 gold efficiency
+            (1040, _f("DEPTH_FACTOR")),                   # 17 depth factor
+            (1040, _f("GRADE_NORM")),                     # 18 normalised grade
+            (1040, _f("AI_SCORE")),                       # 19 AI dilution score
+            (1040, _f("DILUTION_SENSITIVITY")),           # 20 dilution headroom %
+            (1040, _f("DILUTION_RISK_SCORE")),            # 21 dilution risk score
+            (1000, _s("DILUTION_RISK", "UNKNOWN")),       # 22 risk label (LOW/MED/HIGH)
+            (1071, _i("MINE_SEQUENCE")),                  # 23 mining sequence index
+        ])
 
-        poly = (
-            f"  0\nPOLYLINE\n"
-            f"  5\n{ph}\n"
-            f"  330\n1F\n"                  # owner = *MODEL_SPACE
-            f"  100\nAcDbEntity\n"
-            f"  8\n{layer_name}\n"
-            f"  62\n30\n"                   # color = orange (matches reference)
-            f"  100\nAcDbPolyFaceMesh\n"
-            f"  66\n1\n"                    # vertices follow
-            f"  10\n0\n"
-            f"  20\n0\n"
-            f"  30\n{z_level}\n"            # Z elevation of stope level
-            f"  70\n64\n"                   # PolyFaceMesh flag
-            f"  71\n8\n"                    # 8 geometry vertices
-            f"  72\n6\n"                    # 6 face records
-        )
+    # ── Set EXTMIN / EXTMAX ───────────────────────────────────────────────────
+    if all_xs:
+        doc.header["$EXTMIN"] = (min(all_xs), min(all_ys), min(all_zs))
+        doc.header["$EXTMAX"] = (max(all_xs), max(all_ys), max(all_zs))
 
-        # ── XDATA (23 named keys matching reference, then STOPE/GUID/COLOR) ──
-        xdata_vals = [
-            ("STOPENUM",    f"  1040\n{stope_idx + 1}\n"),
-            ("GROUP",       f"  1040\n{stope_idx + 1}\n"),
-            ("SURFACE",     f"  1040\n1\n"),
-            ("VOLUME",      f"  1040\n{vol_m3}\n"),
-            ("TONNES",      f"  1040\n{ore_t}\n"),
-            ("QUAD",        f"  1040\n{stope_idx + 1}\n"),
-            ("PASSTYPE",    f"  1040\n1\n"),
-            ("PASSNUM",     f"  1040\n1\n"),
-            ("PASSSEQ",     f"  1040\n1\n"),
-            ("DENSITY",     f"  1040\n{density}\n"),
-            ("AU",          f"  1040\n{_f(row, 'WAVG_GRADE')}\n"),
-            ("RESULT",      f"  1040\n1\n"),
-            ("CUTOFF",      f"  1040\n{int(round(cutoff))}\n"),
-            ("HEADGRAD",    f"  1040\n{int(round(cutoff))}\n"),
-            ("SLENGTH",     f"  1040\n{xinc}\n"),
-            ("SHEIGHT",     f"  1040\n{zinc}\n"),
-            ("SAVGWID",     f"  1040\n{yinc}\n"),
-            ("SSTRIKE",     f"  1040\n0\n"),
-            ("SDIP",        f"  1040\n90\n"),
-            ("STRUEDIP",    f"  1040\n90\n"),
-            ("STRUEDIPDIR", f"  1040\n270\n"),
-            ("ISFARHW",     f"  1040\n0\n"),
-            ("LEVELID",     f"  1040\n{z0}\n"),
-            ("STOPE",       f"  1000\nStope_{stope_idx + 1}\n"),
-            ("GUID",        f"  1000\n\n"),
-            ("COLOR",       f"  1070\n1\n"),
-        ]
-        xdata_str = ""
-        for app_id, val_str in xdata_vals:
-            xdata_str += f"  1001\n{app_id}\n{val_str}"
-
-        # ── 8 geometry VERTEX records ─────────────────────────────────────────
-        geom_verts = ""
-        for vi, (cx, cy, cz) in enumerate(corners):
-            vh = format(handle_base + stope_idx * 20 + 1 + vi, 'X')
-            geom_verts += (
-                f"  0\nVERTEX\n"
-                f"  5\n{vh}\n"
-                f"  330\n{ph}\n"
-                f"  100\nAcDbEntity\n"
-                f"  8\n{layer_name}\n"
-                f"  62\n30\n"
-                f"  100\nAcDbVertex\n"
-                f"  100\nAcDbPolyFaceMeshVertex\n"
-                f"  10\n{cx}\n"
-                f"  20\n{cy}\n"
-                f"  30\n{cz}\n"
-                f"  70\n192\n"
-            )
-
-        # ── 6 face VERTEX records ─────────────────────────────────────────────
-        face_verts = ""
-        for fi, (v1, v2, v3, v4) in enumerate(BOX_FACES):
-            fh = format(handle_base + stope_idx * 20 + 9 + fi, 'X')
-            face_verts += (
-                f"  0\nVERTEX\n"
-                f"  5\n{fh}\n"
-                f"  330\n{ph}\n"
-                f"  100\nAcDbEntity\n"
-                f"  8\n{layer_name}\n"
-                f"  62\n30\n"
-                f"  100\nAcDbFaceRecord\n"
-                f"  10\n0\n"
-                f"  20\n0\n"
-                f"  30\n0\n"
-                f"  70\n128\n"
-                f"  71\n{v1}\n"
-                f"  72\n{v2}\n"
-                f"  73\n{v3}\n"
-                f"  74\n{v4}\n"
-            )
-
-        # ── SEQEND ────────────────────────────────────────────────────────────
-        sh = format(handle_base + stope_idx * 20 + 15, 'X')
-        seqend = (
-            f"  0\nSEQEND\n"
-            f"  5\n{sh}\n"
-            f"  330\n{ph}\n"
-            f"  100\nAcDbEntity\n"
-            f"  8\n{layer_name}\n"
-        )
-
-        lines.append(poly + xdata_str + geom_verts + face_verts + seqend)
-
-    lines += ["  0\nENDSEC\n"]
-
-    # ── OBJECTS section ───────────────────────────────────────────────────────
-    # Handles 0x120-0x1FF are free: TABLES uses ≤0x1BB, stopes start at 0x200
-    lines += [
-        "  0\nSECTION\n  2\nOBJECTS\n",
-        "  0\nDICTIONARY\n  5\n120\n  330\n0\n  100\nAcDbDictionary\n  281\n1\n  3\nACAD_GROUP\n  360\n121\n  3\nACAD_MLINESTYLE\n  360\n122\n",
-        "  0\nDICTIONARY\n  5\n121\n  330\n120\n  100\nAcDbDictionary\n  281\n1\n",
-        "  0\nDICTIONARY\n  5\n122\n  330\n120\n  100\nAcDbDictionary\n  281\n1\n  3\nSTANDARD\n  360\n123\n",
-        "  0\nMLINESTYLE\n  5\n123\n  330\n122\n  100\nAcDbMlineStyle\n  2\nSTANDARD\n  70\n0\n  3\n\n  62\n256\n  51\n90\n  52\n90\n  71\n2\n  49\n0.5\n  62\n256\n  6\nBYLAYER\n  49\n-0.5\n  62\n256\n  6\nBYLAYER\n",
-        "  0\nENDSEC\n",
-    ]
-
-    lines += ["  0\nEOF\n"]
-
-    # ── Write file ────────────────────────────────────────────────────────────
-    with open(output_path, 'w', newline='\r\n') as fh:
-        fh.write(''.join(lines))
-
+    doc.saveas(output_path)
     print(f"[dxf_export]  Saved {len(stopes):,} POLYLINE solids -> {output_path}")
-
-
-def dxf_export(stopes: pd.DataFrame, output_path: str, cutoff: float = 10.0):
-    """Write stopes as POLYLINE PolyFace Mesh solids — raw DXF writer matching reference."""
-    _dxf_write_raw(stopes, output_path, cutoff)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MODULE 13 — DASHBOARD JSON EXPORT
@@ -1992,8 +1609,8 @@ def live_reeval(df, wavg, gold_sum, tons_sum, waste_sum,
     stopes_all = ranking_module(stopes_all, reg=reg, scaler=scaler)
     stopes_opt, _bs, stopes_reset = optimised_greedy_selection(
         stopes_all, df)
-    # Skip iterative improvement — block sets not pre-computed (ITERATIVE_ITERS=0)
-    # stopes_opt already optimal from DP selection
+    stopes_opt = iterative_improvement(
+        stopes_reset, _bs, stopes_opt, df, n_iterations=20)
 
     dxf_path = os.path.join(out_dir, f"stopes_cutoff_{new_cutoff:.1f}gt.dxf")
     dxf_export(stopes_opt, output_path=dxf_path, cutoff=new_cutoff)

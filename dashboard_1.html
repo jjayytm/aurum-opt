@@ -55,17 +55,6 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);
 }
 .nav-tab:hover{color:var(--text);background:var(--s2)}
 .nav-tab.active{color:var(--text);background:var(--s2);border-color:var(--border2)}
-.nav-tab.pipeline-tab{
-  color:var(--gold);
-  border-color:transparent !important;
-  background:none !important;
-}
-.nav-tab.pipeline-tab:hover{background:none !important}
-.nav-tab.pipeline-tab.active{
-  background:none !important;
-  border-color:transparent !important;
-  box-shadow:inset 0 -2px 0 rgba(201,168,76,.55);
-}
 .nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
 .pill{font-size:9px;font-weight:600;padding:2px 9px;border-radius:99px;
   border:1px solid;letter-spacing:.03em;white-space:nowrap}
@@ -388,31 +377,8 @@ body.light .ai-card-title{color:var(--text)}
 .esldr-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .esldr-lbl{font-size:10px;font-weight:600;color:var(--text)}
 .esldr-val{font-size:16px;font-weight:700;color:var(--gold)}
-/* Native range tracks render inset from the element edges (thumb width),
-   so we pad both the slider and tick labels to keep them aligned. */
-input.esldr{
-  width:calc(100% - 32px);
-  margin:4px 16px;
-  box-sizing:border-box;
-  accent-color:var(--gold);
-  cursor:pointer;
-}
-.esldr-tks{
-  position:relative;
-  width:calc(100% - 32px);
-  margin:2px 16px 0 16px;
-  padding:0;
-  height:12px;
-  box-sizing:border-box;
-}
-.esldr-tks span{
-  position:absolute;
-  top:0;
-  transform:translateX(-50%);
-  font-size:9px;
-  color:var(--muted2);
-  text-align:center;
-}
+input.esldr{width:100%;accent-color:var(--gold);cursor:pointer;margin:4px 0}
+.esldr-tks{display:flex;justify-content:space-between;font-size:9px;color:var(--muted2);margin-top:2px}
 .esens{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .esens-c{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center}
 .esens-l{font-size:8px;color:#888878;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
@@ -648,14 +614,6 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
       AURUM<span class="gem-dot"></span>OPT
     </div>
   </div>
-  <div id="introSub" style="
-    font-family:'DM Sans',sans-serif;
-    font-size:clamp(0.6rem,1.6vw,0.82rem);
-    font-weight:400;letter-spacing:0.22em;
-    text-transform:uppercase;color:rgba(201,168,76,.55);
-    margin-top:1.4rem;opacity:0;
-    transition:opacity 0.8s ease 0.5s;
-  ">From block model to mine plan — in seconds</div>
 </div>
 
 <!-- ═══ NAV ═══ -->
@@ -676,8 +634,7 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showTab('3d')">⬡ 3D Deposit</button>
     <button class="nav-tab" onclick="showTab('results')">⬛ Results</button>
-    <button class="nav-tab" onclick="showTab('economic')">◊ Economics</button>
-    <button class="nav-tab pipeline-tab" onclick="showTab('pipeline')">◈ Pipeline</button>
+    <button class="nav-tab" onclick="showTab('economic')">💰 Economics</button>
   </div>
   <div class="nav-right">
     <span class="pill pill-g">Z-alignment PASS</span>
@@ -819,7 +776,7 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
           <div class="run-bar-track">
             <div class="run-bar-fill indeterminate" id="runBarFill"></div>
           </div>
-          <div class="run-hint" id="runHint"></div>
+          <div class="run-hint" id="runHint">This takes ~20–40 s</div>
         </div>
         <div class="run-log" id="runLog"></div>
       </div>
@@ -1029,19 +986,19 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
             </div>
           </div>
           <div class="eblk">
-            <div class="eblk-hdr" style="font-size:10px">Gold Price Sensitivity<span class="eblk-tag">Live — no re-run needed</span></div>
+            <div class="eblk-hdr">Gold Price Sensitivity<span class="eblk-tag">Live — no re-run needed</span></div>
             <div class="esldr-hd">
-              <span class="esldr-lbl" style="font-size:11px">Gold Price</span>
-              <div style="display:flex;align-items:flex-end;gap:6px">
-                <span style="font-size:11px;color:#888878;margin-bottom:2px">$</span>
+              <span class="esldr-lbl">Gold Price</span>
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:10px;color:#888878">$</span>
                 <input type="number" id="goldPriceInput" min="500" max="10000" step="50" value="3000"
-                  style="width:72px;background:var(--s2);border:1px solid var(--border);border-radius:5px;
-                    padding:4px 7px;color:var(--gold);font-size:16px;font-weight:800;text-align:right;
-                    font-family:inherit;outline:none;box-sizing:border-box"
+                  style="width:68px;background:var(--s2);border:1px solid var(--border);border-radius:5px;
+                    padding:3px 7px;color:var(--gold);font-size:14px;font-weight:700;text-align:right;
+                    font-family:inherit;outline:none"
                   oninput="onGoldPriceInput(this.value)">
-                <span style="font-size:11px;color:#888878;margin-bottom:2px">/oz</span>
+                <span style="font-size:10px;color:#888878">/oz</span>
                 <button onclick="setGoldBase()"
-                  style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;
+                  style="font-size:9px;font-weight:600;padding:3px 8px;border-radius:5px;
                     background:var(--s3);border:1px solid var(--border);color:#888878;
                     cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .15s"
                   onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
@@ -1050,11 +1007,12 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
                 </button>
               </div>
             </div>
-            <div style="font-size:10px;color:#888878;margin-bottom:6px">
-              Base: <span id="basePriceLabel" style="color:var(--gold);font-weight:700">$3,000 /oz</span>
+            <div style="font-size:9px;color:#888878;margin-bottom:6px">
+              Base: <span id="basePriceLabel" style="color:var(--gold);font-weight:600">$3,000 /oz</span>
               <span style="color:#666658;margin-left:4px">— change vs this price shown below</span>
             </div>
-            <!-- Gold price slider removed (only number input is used). -->
+            <input type="range" class="esldr" id="goldPriceSlider" min="500" max="10000" step="50" value="3000" oninput="onGoldPriceChange(this.value)">
+            <div class="esldr-tks"><span>$500</span><span>$2,000</span><span>$3,500</span><span>$5,000</span></div>
 
             <!-- Cost assumption overrides — practical for mine planners -->
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
@@ -1151,128 +1109,6 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
         </div>
       </div><!-- /pane-economic -->
 
-      <!-- TAB: PIPELINE -->
-      <div class="tab-pane" id="pane-pipeline" style="overflow-y:auto;padding:28px 32px;background:var(--bg);flex-direction:column;gap:20px">
-
-        <!-- Header -->
-        <div style="text-align:center;margin-bottom:8px">
-          <div style="font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold-dim);font-weight:600;margin-bottom:8px">AURUM · OPT</div>
-          <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--text);margin-bottom:6px">End-to-End Pipeline</div>
-          <div style="font-size:12px;color:var(--muted)">From raw block model CSV → compliant, sequenced, profitable mine plan</div>
-        </div>
-
-        <!-- Pipeline diagram -->
-        <div style="max-width:860px;margin:0 auto;width:100%">
-
-          <!-- Stage 1 label -->
-          <div style="font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#444438;font-family:monospace;text-align:center;margin-bottom:8px">Stage 1 — Core Algorithm</div>
-
-          <!-- Row 1 + down arrow under DP (col 5); 860 = 766px row + centered -->
-          <div style="display:grid;grid-template-columns:148px 32px 178px 32px 196px 32px 148px;justify-content:center;margin:0 auto;width:100%;max-width:860px">
-            <div style="grid-column:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(136,135,128,.3);background:rgba(136,135,128,.1);padding:14px 16px;text-align:center;min-height:76px">
-              <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Block model CSV</div>
-              <div style="font-size:11px;color:var(--muted)">Raw ore data upload</div>
-            </div>
-            <div style="grid-column:2;align-self:center;display:flex;justify-content:center">
-              <svg width="32" height="16" aria-hidden="true"><line x1="2" y1="8" x2="26" y2="8" stroke="#444438" stroke-width="1.5"/><polygon points="22,4 30,8 22,12" fill="#444438"/></svg>
-            </div>
-            <div style="grid-column:3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(127,119,221,.35);background:rgba(127,119,221,.12);padding:14px 16px;text-align:center;min-height:76px">
-              <div style="font-size:13px;font-weight:500;color:#CECBF6;margin-bottom:4px">Prefix-sum speed engine</div>
-              <div style="font-size:11px;color:#AFA9EC">Instant 3D value lookup</div>
-            </div>
-            <div style="grid-column:4;align-self:center;display:flex;justify-content:center">
-              <svg width="32" height="16" aria-hidden="true"><line x1="2" y1="8" x2="26" y2="8" stroke="#444438" stroke-width="1.5"/><polygon points="22,4 30,8 22,12" fill="#444438"/></svg>
-            </div>
-            <div style="grid-column:5;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(127,119,221,.35);background:rgba(127,119,221,.12);padding:14px 16px;text-align:center;min-height:76px">
-              <div style="font-size:13px;font-weight:500;color:#CECBF6;margin-bottom:4px">Dynamic programming optimizer</div>
-              <div style="font-size:11px;color:#AFA9EC">Provably optimal selection</div>
-            </div>
-            <div style="grid-column:6;align-self:center;display:flex;justify-content:center">
-              <svg width="32" height="16" aria-hidden="true"><line x1="2" y1="8" x2="26" y2="8" stroke="#444438" stroke-width="1.5"/><polygon points="22,4 30,8 22,12" fill="#444438"/></svg>
-            </div>
-            <div style="grid-column:7;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px dashed rgba(201,168,76,.4);background:rgba(136,135,128,.08);padding:14px 16px;text-align:center;min-height:76px">
-              <div style="font-size:13px;font-weight:500;color:var(--gold);margin-bottom:4px">Z-alignment gate</div>
-              <div style="font-size:11px;color:var(--muted)">Compliance — always on</div>
-            </div>
-            <div style="grid-column:5;grid-row:2;display:flex;justify-content:center;padding:6px 0 2px">
-              <svg width="16" height="32" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="26" stroke="#444438" stroke-width="1.5"/><polygon points="4,22 8,30 12,22" fill="#444438"/></svg>
-            </div>
-          </div>
-
-          <!-- Stage 2 label -->
-          <div style="font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#444438;font-family:monospace;text-align:center;margin-bottom:8px">Stage 2 — AI &amp; Economics Layer</div>
-
-          <!-- Row 2: AI + Economics (centered; flow AI → Economics). Stem in SVG uses Economics center ≈551/860 -->
-          <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:nowrap;margin-top:2px">
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(29,158,117,.35);background:rgba(29,158,117,.12);padding:14px 16px;text-align:center;min-height:76px;width:210px;flex-shrink:0">
-              <div style="font-size:13px;font-weight:500;color:#9FE1CB;margin-bottom:4px">AI dilution risk model</div>
-              <div style="font-size:11px;color:#5DCAA5">HIGH / MED / LOW per stope</div>
-            </div>
-            <svg width="32" height="16" style="flex-shrink:0" aria-hidden="true"><line x1="2" y1="8" x2="26" y2="8" stroke="#444438" stroke-width="1.5"/><polygon points="22,4 30,8 22,12" fill="#444438"/></svg>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(29,158,117,.35);background:rgba(29,158,117,.12);padding:14px 16px;text-align:center;min-height:76px;width:210px;flex-shrink:0">
-              <div style="font-size:13px;font-weight:500;color:#9FE1CB;margin-bottom:4px">Economics &amp; sequencing</div>
-              <div style="font-size:11px;color:#5DCAA5">NPV · cost · mining order</div>
-            </div>
-          </div>
-
-          <!-- Fan-out: stem from Economics box center; bar + drops match Stage 3 (4×1fr, gap 10px on 860px) -->
-          <svg viewBox="0 0 860 50" width="100%" height="50" preserveAspectRatio="xMidYMid meet" style="display:block;margin:8px auto 0;max-width:860px" aria-hidden="true">
-            <g stroke="rgba(201,168,76,.5)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="551" y1="0" x2="551" y2="15"/>
-              <line x1="103.75" y1="15" x2="756.25" y2="15"/>
-              <line x1="103.75" y1="15" x2="103.75" y2="40"/>
-              <line x1="321.25" y1="15" x2="321.25" y2="40"/>
-              <line x1="538.75" y1="15" x2="538.75" y2="40"/>
-              <line x1="756.25" y1="15" x2="756.25" y2="40"/>
-            </g>
-            <g fill="rgba(201,168,76,.55)">
-              <polygon points="103.75,48 99.5,40 108,40"/>
-              <polygon points="321.25,48 317,40 325.5,40"/>
-              <polygon points="538.75,48 534.5,40 543,40"/>
-              <polygon points="756.25,48 752,40 760.5,40"/>
-            </g>
-          </svg>
-
-          <!-- Stage 3 label -->
-          <div style="font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#444438;font-family:monospace;text-align:center;margin-bottom:8px">Stage 3 — Dashboard Outputs</div>
-
-          <!-- Row 3: 4 output nodes -->
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(186,117,23,.35);background:rgba(186,117,23,.12);padding:14px 12px;text-align:center;min-height:80px">
-              <div style="font-size:13px;font-weight:500;color:#FAC775;margin-bottom:4px">3D deposit view</div>
-              <div style="font-size:11px;color:#EF9F27">Interactive rotating block model</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(186,117,23,.35);background:rgba(186,117,23,.12);padding:14px 12px;text-align:center;min-height:80px">
-              <div style="font-size:13px;font-weight:500;color:#FAC775;margin-bottom:4px">Results &amp; sensitivity</div>
-              <div style="font-size:11px;color:#EF9F27">KPIs · charts · cutoff table</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(186,117,23,.35);background:rgba(186,117,23,.12);padding:14px 12px;text-align:center;min-height:80px">
-              <div style="font-size:13px;font-weight:500;color:#FAC775;margin-bottom:4px">Economics dashboard</div>
-              <div style="font-size:11px;color:#EF9F27">P&amp;L · live gold price slider</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(99,153,34,.4);background:rgba(59,109,17,.15);padding:14px 12px;text-align:center;min-height:80px">
-              <div style="font-size:13px;font-weight:500;color:#C0DD97;margin-bottom:4px">DXF export</div>
-              <div style="font-size:11px;color:#97C459">CAD-ready · mine-ready</div>
-            </div>
-          </div>
-
-          <!-- Compliance footer -->
-          <div style="margin-top:20px;border:1px dashed rgba(201,168,76,.3);border-radius:8px;padding:12px 20px;text-align:center">
-            <div style="font-size:11px;font-weight:500;color:var(--gold);letter-spacing:.5px;margin-bottom:3px">Z-Alignment Compliance Gate — always active</div>
-            <div style="font-size:12px;color:var(--muted)">Every candidate stope is validated for minimum width, vertical alignment, and geological boundaries before entering the optimizer. Non-compliant stopes are rejected automatically.</div>
-          </div>
-
-          <!-- Legend -->
-          <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:16px">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:#7F77DD;flex-shrink:0"></div>Core algorithm</div>
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:#1D9E75;flex-shrink:0"></div>AI + economics layer</div>
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:#BA7517;flex-shrink:0"></div>Dashboard outputs</div>
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:#639922;flex-shrink:0"></div>Mine deliverable</div>
-          </div>
-
-        </div>
-      </div><!-- /pane-pipeline -->
-
     </div><!-- /tab-content -->
   </div><!-- /right -->
 </div><!-- /body -->
@@ -1290,37 +1126,29 @@ body.light ::-webkit-scrollbar-thumb { background:var(--border2); }
   const wordmark = document.getElementById('introWordmark');
   const echo     = document.getElementById('introEcho');
   const tagline  = document.getElementById('introTagline');
-  const sub      = document.getElementById('introSub');
 
-  // Stage 1: fade in wordmark + tagline
+  // Stage 1: fade in (text-in)
   const t0 = setTimeout(() => {
     wordmark.classList.add('fade-in');
     tagline.classList.add('visible');
   }, 0);
 
-  // Stage 1b: fade in subtitle line after wordmark settles
-  const t0b = setTimeout(() => {
-    if (sub) sub.style.opacity = '1';
-  }, 700);
-
-  // Stage 2: blur out — after ~3s hold
+  // Stage 2: blur out
   const t1 = setTimeout(() => {
     wordmark.classList.remove('fade-in');
     wordmark.classList.add('blur-shift');
     echo.classList.add('blur-shift');
-    if (sub) sub.style.transition = 'opacity 0.5s ease';
-    if (sub) sub.style.opacity = '0';
-  }, 3200);
+  }, 1100);
 
   // Stage 3: fade out entire splash
   const t2 = setTimeout(() => {
     splash.classList.add('fade-out');
-  }, 3900);
+  }, 2800);
 
   // Stage 4: remove from DOM
   const t3 = setTimeout(() => {
     splash.remove();
-  }, 4500);
+  }, 3350);
 })();
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1921,9 +1749,8 @@ function addBtn(c){
    TABS
 ════════════════════════════════════════════════════════════════════ */
 function showTab(name){
-  const tabNames = ['3d','results','economic','pipeline'];
   document.querySelectorAll('.nav-tab').forEach((t,i)=>
-    t.classList.toggle('active', tabNames[i] === name));
+    t.classList.toggle('active',['3d','results'][i]===name));
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById(`pane-${name}`).classList.add('active');
   // Show 3D controls only on 3D tab
@@ -1994,7 +1821,7 @@ function _setRunUI(state) {
     fill.classList.remove('done','error');
     document.getElementById('runStage').textContent = 'Starting...';
     document.getElementById('runPct').textContent   = '';
-    document.getElementById('runHint').textContent  = '';
+    document.getElementById('runHint').textContent  = 'This takes ~20-40 s';
   } else if (state === 'done') {
     fill.classList.remove('indeterminate','error');
     fill.classList.add('done');
@@ -2061,17 +1888,6 @@ function _pollStatus() {
           fetch(url)
             .then(r => { if(!r.ok) throw new Error(r.status); return r.json(); })
             .then(d => {
-              if (d && d.error) {
-                _setRunUI('error');
-                const msg = String(d.error || '').trim();
-                if (msg) {
-                  const short = msg.length > 80 ? (msg.slice(0, 77) + '…') : msg;
-                  document.getElementById('runStage').textContent = short;
-                  document.getElementById('runHint').textContent  = msg;
-                }
-                setNav('Run failed', 'err');
-                return;
-              }
               const nc = normCut(d.cutoff != null ? d.cutoff : c);
               cache[nc] = d;
               if (!cutoffInList(CUTOFFS, nc)) { CUTOFFS.push(nc); addSensRow(nc); }
@@ -2089,17 +1905,6 @@ function _pollStatus() {
               fetch('results.json?_=' + Date.now())
                 .then(r => r.json())
                 .then(d => {
-                  if (d && d.error) {
-                    _setRunUI('error');
-                    const msg = String(d.error || '').trim();
-                    if (msg) {
-                      const short = msg.length > 80 ? (msg.slice(0, 77) + '…') : msg;
-                      document.getElementById('runStage').textContent = short;
-                      document.getElementById('runHint').textContent  = msg;
-                    }
-                    setNav('Run failed', 'err');
-                    return;
-                  }
                   const nc = normCut(d.cutoff);
                   cache[nc] = d;
                   if (!cutoffInList(CUTOFFS, nc)) { CUTOFFS.push(nc); addSensRow(nc); }
@@ -2119,15 +1924,6 @@ function _pollStatus() {
       } else if (data.status === 'error') {
         _setRunUI('error');
         clearTimeout(_runPollTimer);
-        // Show backend-provided error if available.
-        try{
-          const msg = (data.message || '').toString().trim();
-          if (msg) {
-            const short = msg.length > 80 ? (msg.slice(0, 77) + '…') : msg;
-            document.getElementById('runStage').textContent = short;
-            document.getElementById('runHint').textContent  = msg;
-          }
-        } catch {}
       }
     })
     .catch(() => { _runPollTimer = setTimeout(_pollStatus, 1500); });
@@ -2232,7 +2028,7 @@ function renderExtras(c) {
   if (_mc  && d.mining_cost_t)   _mc.value  = d.mining_cost_t;
   if (_ml  && d.milling_cost_t)  _ml.value  = d.milling_cost_t;
   if (_rec && d.recovery_pct)    _rec.value  = Math.round(d.recovery_pct * 100);
-  calcEcon(d, parseFloat(document.getElementById('goldPriceInput').value) || 3000);
+  calcEcon(d, parseFloat(document.getElementById('goldPriceSlider').value) || 3000);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -2249,7 +2045,7 @@ function fmtUSD(v) {
 }
 window._baseGoldPrice = 3000;
 function onCostChange() {
-  const gp = parseFloat(document.getElementById('goldPriceInput')?.value) || 3000;
+  const gp = parseFloat(document.getElementById('goldPriceSlider')?.value) || 3000;
   if (window._econData) calcEcon(window._econData, gp);
 }
 function setGoldBase() {
@@ -2269,6 +2065,8 @@ function onGoldPriceChange(val) {
 function onGoldPriceInput(val) {
   const p = parseFloat(val);
   if (isNaN(p) || p < 1500 || p > 5000) return;
+  const sld = document.getElementById('goldPriceSlider');
+  if (sld) sld.value = p;
   if (window._econData) calcEcon(window._econData, p);
 }
 function getEconParams(d) {

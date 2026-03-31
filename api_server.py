@@ -34,7 +34,19 @@ def run_optimizer(csv_path: str, cutoff: float):
                    started=time.time())
     try:
         import stope_optimizer as so
-        so.main(csv_path=csv_path, cutoff=cutoff)
+        state = so.main(csv_path=csv_path, cutoff=cutoff)
+        # If the optimizer returns a structured error, treat the whole job as failed.
+        # This prevents the frontend from falling back to an older results.json
+        # and showing "Complete!" incorrectly.
+        if isinstance(state, dict) and state.get("error"):
+            with job_lock:
+                job.update(
+                    running=False,
+                    status="error",
+                    message=str(state.get("error")),
+                    elapsed=None,
+                )
+            return
         elapsed = round(time.time() - job["started"], 1)
 
         # Read result written by optimizer
